@@ -5,7 +5,7 @@ use std::ops::RangeInclusive;
 use std::path::Path;
 
 use anyhow::{Result, anyhow};
-use log::{debug, warn};
+use log::warn;
 
 use markdown::{
     ParseOptions,
@@ -54,7 +54,29 @@ fn list_item_is_card(li: &mdast::ListItem) -> bool {
     false
 }
 
-fn find_card_list_items(list: &mdast::List) -> Vec<mdast::ListItem> {
+fn find_card_list_items(file_raw: &str) -> Result<Vec<mdast::ListItem>> {
+    let tree = to_mdast(&file_raw, &ParseOptions::default())
+        .map_err(|x| anyhow!("could not parse markdown: {:?}", x))?;
+    let Node::Root(r) = tree else {
+        return Err(anyhow!("expected Root node, got: {:?}", tree));
+    };
+    let top_list = match r.children.as_slice() {
+        [Node::Paragraph(_)] | [] => {
+            // If it's just a paragraph, there are no cards.
+            // If it's empty, there are no cards.
+            warn!("file did not contain a list");
+            return Ok(vec![]);
+        }
+        [Node::Paragraph(_), Node::List(l)] => l,
+        [Node::List(l)] => l,
+        top_nodes => {
+            return Err(anyhow!("expected (Paragraph,)? List, got: {:?}", top_nodes));
+        }
+    };
+    Ok(find_card_list_items_inner(top_list))
+}
+
+fn find_card_list_items_inner(list: &mdast::List) -> Vec<mdast::ListItem> {
     let mut cards = Vec::new();
     for node in &list.children {
         if let Node::ListItem(li) = node {
@@ -65,7 +87,7 @@ fn find_card_list_items(list: &mdast::List) -> Vec<mdast::ListItem> {
             }
             for child in &li.children {
                 if let Node::List(l) = child {
-                    let mut nested = find_card_list_items(l);
+                    let mut nested = find_card_list_items_inner(l);
                     cards.append(&mut nested);
                 }
             }
@@ -84,11 +106,12 @@ fn range_from_position(position: &markdown::unist::Position) -> RangeInclusive<u
 use heapless;
 
 // Some considerations
-// 1. I want to be able to hold all card metadata in memory, without holding all card data in memory
-// 2. I want to be able to load one card at a time and immediately store it back modified
+// * I want to be able to hold all card metadata in memory, without holding all card data in memory
+// * I want to be able to load one card at a time and immediately store it back modified
+// * source_path is potentially used in lots of cards, avoid copying it
 #[derive(Debug)]
 #[allow(dead_code)]
-struct CardMetadata<'a> {
+pub struct CardMetadata<'a> {
     source_path: &'a Path,
     // prompt_fingerprint is valid within the version of logseq_srs, but not necessarily accross
     prompt_fingerprint: u64,
@@ -103,7 +126,7 @@ fn fingerprint(s: &str) -> u64 {
 
 fn destructure_card<'a>(
     card: &mdast::ListItem,
-    file_raw_lines: &'a Vec<&'a str>,
+    file_raw_lines: &'a [&'a str],
 ) -> Result<(&'a [&'a str], &'a [&'a str])> {
     // TODO: allow multiple paragraphs followed by a list
     // take until list?
@@ -135,29 +158,49 @@ fn destructure_card<'a>(
     Ok((p_lines, l_lines))
 }
 
+fn extract_card_metadata<'a>(
+    card_list_item: &mdast::ListItem,
+    path: &'a Path,
+    file_raw_lines: &[&str],
+) -> Result<CardMetadata<'a>> {
+    let (prompt_lines, _) = destructure_card(card_list_item, file_raw_lines)?;
+    let prompt_line_first = prompt_lines.first().unwrap_or(&"").to_owned().trim_end();
+
+    let prompt = prompt_lines.join("\n");
+    let mut prompt_prefix: heapless::String<64> = heapless::String::new();
+    for c in prompt_line_first.chars().take(64) {
+        if prompt_prefix.push(c).is_err() {
+            break;
+        };
+    }
+
+    Ok(CardMetadata {
+        source_path: path,
+        prompt_fingerprint: fingerprint(&prompt),
+        prompt_prefix: prompt_prefix,
+    })
+}
+
+pub fn extract_card_metadatas(path: &Path) -> Result<Vec<CardMetadata>> {
+    let file_raw = fs::read_to_string(path)?;
+    let file_raw_lines: Vec<&str> = file_raw.lines().collect();
+
+    let card_list_items = find_card_list_items(&file_raw)?;
+
+    let card_metadatas = card_list_items
+        .iter()
+        .map(|li| extract_card_metadata(li, path, &file_raw_lines))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(card_metadatas)
+}
+
 pub fn cards_in_file(path: &Path) -> Result<()> {
     let file_raw = fs::read_to_string(path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
 
-    let tree = to_mdast(&file_raw, &ParseOptions::default())
-        .map_err(|x| anyhow!("could not parse markdown: {:?}", x))?;
-    let Node::Root(r) = tree else {
-        return Err(anyhow!("expected Root node, got: {:?}", tree));
-    };
-    let top_list = match r.children.as_slice() {
-        [Node::Paragraph(_)] | [] => {
-            // If it's just a paragraph, there are no cards.
-            // If it's empty, there are no cards.
-            warn!("file did not contain a list");
-            return Ok(());
-        }
-        [Node::Paragraph(_), Node::List(l)] => l,
-        [Node::List(l)] => l,
-        top_nodes => {
-            return Err(anyhow!("expected (Paragraph,)? List, got: {:?}", top_nodes));
-        }
-    };
-    let card_list_items = find_card_list_items(top_list);
+    let card_list_items = find_card_list_items(&file_raw)?;
+
     for li in card_list_items.as_slice() {
         let (prompt_lines, response_lines) = destructure_card(li, &file_raw_lines)?;
         for line in prompt_lines {
@@ -166,21 +209,6 @@ pub fn cards_in_file(path: &Path) -> Result<()> {
         for line in response_lines {
             println!("{}", line);
         }
-
-        let prompt = prompt_lines.join("\n");
-        let mut prompt_prefix: heapless::String<64> = heapless::String::new();
-        for c in prompt.chars().take(64) {
-            if prompt_prefix.push(c).is_err() {
-                break;
-            };
-        }
-
-        let card_metadata = CardMetadata {
-            source_path: path,
-            prompt_fingerprint: fingerprint(&prompt),
-            prompt_prefix: prompt_prefix,
-        };
-        debug!("card_metadata={:?}", card_metadata);
     }
 
     Ok(())
