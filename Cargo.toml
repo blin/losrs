@@ -10,6 +10,7 @@ clap-verbosity-flag = "3.0.3"
 env_logger = "0.11.8"
 log = "0.4.27"
 markdown = "1.0.0"
+xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.17"

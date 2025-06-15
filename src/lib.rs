@@ -1,7 +1,5 @@
-use std::collections::hash_map::DefaultHasher;
 use std::fmt::Debug;
 use std::fs::{self};
-use std::hash::{Hash, Hasher};
 use std::ops::RangeInclusive;
 use std::path::Path;
 
@@ -111,8 +109,9 @@ fn range_from_position(position: &markdown::unist::Position) -> RangeInclusive<u
 #[allow(dead_code)]
 pub struct CardMetadata<'a> {
     source_path: &'a Path,
-    // prompt_fingerprint is valid within the version of logseq_srs, but not necessarily accross
-    // this will create a problem for tests later on, will need to replace with a stable known hash
+    // prompt_fingerprint is XXH3 64 and will remain valid within the version of logseq_srs,
+    // but not necessarily accross.
+    // The intended use is to list a set of cards, then immediately act on them one by one.
     prompt_fingerprint: u64,
     prompt_prefix: String,
 }
@@ -152,9 +151,7 @@ mod tests {
 }
 
 fn fingerprint(s: &str) -> u64 {
-    let mut hasher = DefaultHasher::new();
-    s.hash(&mut hasher);
-    hasher.finish()
+    xxhash_rust::xxh3::xxh3_64(s.as_bytes())
 }
 
 fn destructure_card<'a>(

@@ -142,7 +142,7 @@ fn single_top_level_card_metadata() -> Result<(), Box<dyn std::error::Error>> {
         .arg("--output=metadata")
         .arg(file.path());
     cmd.assert().success().stdout(predicate::str::contains(
-        "prompt_fingerprint : 0a0dac4a5f84c23b",
+        "prompt_fingerprint : 219dda4ed3b53642",
     ));
 
     Ok(())
