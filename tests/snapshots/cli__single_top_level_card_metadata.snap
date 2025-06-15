@@ -1,0 +1,9 @@
+---
+source: tests/cli.rs
+expression: output
+---
+CardMetadata {
+  source_path        : [TMP_DIR]/page.md
+  prompt_fingerprint : 219dda4ed3b53642
+  prompt_prefix      : What is a sphere? #card
+}
