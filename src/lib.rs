@@ -1,0 +1,187 @@
+use std::collections::hash_map::DefaultHasher;
+use std::fs::{self};
+use std::hash::{Hash, Hasher};
+use std::ops::RangeInclusive;
+use std::path::Path;
+
+use anyhow::{Result, anyhow};
+use log::{debug, warn};
+
+use markdown::{
+    ParseOptions,
+    mdast::{self, Node},
+    to_mdast,
+};
+
+fn list_item_is_card(li: &mdast::ListItem) -> bool {
+    // A ListItem "is a card" if its first child is a Paragraph whos child is a Text with
+    // value that has substring "#card"
+    // Example card:
+    // ListItem {
+    //   children: [
+    //       Paragraph {
+    //           children: [
+    //               Text {
+    //                   value: "What is the taxon common name for Angiosperm? #card\ncard-last-interval:: 97.66\ncard-repeats:: 5\ncard-ease-factor:: 3\ncard-next-schedule:: 2025-07-14T00:00:00.000Z\ncard-last-reviewed:: 2025-04-07T09:12:54.010Z\ncard-last-score:: 5",
+    //                   position: Some(
+    //                       4:3-10:22 (53-293),
+    //                   ),
+    //               },
+    //           ],
+    //           position: Some(
+    //               4:3-10:22 (53-293),
+    //           ),
+    //       },
+    //       ...
+    //   ],
+    //   position: Some(
+    //       4:1-11:21 (51-314),
+    //   ),
+    //   spread: false,
+    //   checked: None,
+    // }
+
+    if let Some(Node::Paragraph(p)) = li.children.first() {
+        return p.children.iter().any(|child| {
+            if let Node::Text(text) = child {
+                text.value.contains("#card")
+            } else {
+                false
+            }
+        });
+    }
+
+    false
+}
+
+fn find_card_list_items(list: &mdast::List) -> Vec<mdast::ListItem> {
+    let mut cards = Vec::new();
+    for node in &list.children {
+        if let Node::ListItem(li) = node {
+            if list_item_is_card(li) {
+                cards.push(li.clone());
+                // We don't want cards within cards, perhaps it is worth warning about this
+                continue;
+            }
+            for child in &li.children {
+                if let Node::List(l) = child {
+                    let mut nested = find_card_list_items(l);
+                    cards.append(&mut nested);
+                }
+            }
+        }
+    }
+    cards
+}
+
+fn range_from_position(position: &markdown::unist::Position) -> RangeInclusive<usize> {
+    // start.line and end.line are 1-indexed
+    // start "Represents the place of the first character of the parsed source region."
+    // end "Represents the place of the first character after the parsed source region, whether it exists or not."
+    RangeInclusive::new(position.start.line - 1, position.end.line - 1)
+}
+
+use heapless;
+
+// Some considerations
+// 1. I want to be able to hold all card metadata in memory, without holding all card data in memory
+// 2. I want to be able to load one card at a time and immediately store it back modified
+#[derive(Debug)]
+#[allow(dead_code)]
+struct CardMetadata<'a> {
+    source_path: &'a Path,
+    // prompt_fingerprint is valid within the version of logseq_srs, but not necessarily accross
+    prompt_fingerprint: u64,
+    prompt_prefix: heapless::String<64>,
+}
+
+fn fingerprint(s: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    s.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn destructure_card<'a>(
+    card: &mdast::ListItem,
+    file_raw_lines: &'a Vec<&'a str>,
+) -> Result<(&'a [&'a str], &'a [&'a str])> {
+    // TODO: allow multiple paragraphs followed by a list
+    // take until list?
+    let (prompt_paragraph, response_list) = match card.children.as_slice() {
+        [Node::Paragraph(p), Node::List(l)] => (p, l),
+        [] | _ => {
+            return Err(anyhow!("Expected card to be [Paragraph, List], got []"));
+        }
+    };
+
+    let p_position = prompt_paragraph
+        .position
+        .as_ref()
+        .ok_or_else(|| anyhow!("The p somehow didn't have a position"))?;
+    let p_range = range_from_position(p_position);
+    let Some(p_lines) = file_raw_lines.get(p_range) else {
+        return Err(anyhow!("Failed to get prompt lines"));
+    };
+
+    let l_position = response_list
+        .position
+        .as_ref()
+        .ok_or_else(|| anyhow!("The p somehow didn't have a position"))?;
+    let l_range = range_from_position(l_position);
+    let Some(l_lines) = file_raw_lines.get(l_range) else {
+        return Err(anyhow!("Failed to get response list lines"));
+    };
+
+    Ok((p_lines, l_lines))
+}
+
+pub fn cards_in_file(path: &Path) -> Result<()> {
+    let file_raw = fs::read_to_string(path)?;
+    let file_raw_lines: Vec<&str> = file_raw.lines().collect();
+
+    let tree = to_mdast(&file_raw, &ParseOptions::default())
+        .map_err(|x| anyhow!("could not parse markdown: {:?}", x))?;
+    let Node::Root(r) = tree else {
+        return Err(anyhow!("expected Root node, got: {:?}", tree));
+    };
+    let top_list = match r.children.as_slice() {
+        [Node::Paragraph(_)] | [] => {
+            // If it's just a paragraph, there are no cards.
+            // If it's empty, there are no cards.
+            warn!("file did not contain a list");
+            return Ok(());
+        }
+        [Node::Paragraph(_), Node::List(l)] => l,
+        [Node::List(l)] => l,
+        top_nodes => {
+            return Err(anyhow!("expected (Paragraph,)? List, got: {:?}", top_nodes));
+        }
+    };
+    let card_list_items = find_card_list_items(top_list);
+    for li in card_list_items.as_slice() {
+        let (prompt_lines, response_lines) = destructure_card(li, &file_raw_lines)?;
+        for line in prompt_lines {
+            println!("{}", line);
+        }
+        for line in response_lines {
+            println!("{}", line);
+        }
+
+        let prompt = prompt_lines.join("\n");
+        let mut prompt_prefix: heapless::String<64> = heapless::String::new();
+        for c in prompt.chars().take(64) {
+            if prompt_prefix.push(c).is_err() {
+                break;
+            };
+        }
+
+        let card_metadata = CardMetadata {
+            source_path: path,
+            prompt_fingerprint: fingerprint(&prompt),
+            prompt_prefix: prompt_prefix,
+        };
+        debug!("card_metadata={:?}", card_metadata);
+    }
+
+    Ok(())
+}
