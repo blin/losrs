@@ -1,4 +1,5 @@
 use std::collections::hash_map::DefaultHasher;
+use std::fmt::Debug;
 use std::fs::{self};
 use std::hash::{Hash, Hasher};
 use std::ops::RangeInclusive;
@@ -103,19 +104,51 @@ fn range_from_position(position: &markdown::unist::Position) -> RangeInclusive<u
     RangeInclusive::new(position.start.line - 1, position.end.line - 1)
 }
 
-use heapless;
-
 // Some considerations
 // * I want to be able to hold all card metadata in memory, without holding all card data in memory
 // * I want to be able to load one card at a time and immediately store it back modified
 // * source_path is potentially used in lots of cards, avoid copying it
-#[derive(Debug)]
 #[allow(dead_code)]
 pub struct CardMetadata<'a> {
     source_path: &'a Path,
     // prompt_fingerprint is valid within the version of logseq_srs, but not necessarily accross
+    // this will create a problem for tests later on, will need to replace with a stable known hash
     prompt_fingerprint: u64,
-    prompt_prefix: heapless::String<64>,
+    prompt_prefix: String,
+}
+
+impl Debug for CardMetadata<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "CardMetadata {{")?;
+        writeln!(f, "  source_path        : {}", self.source_path.display())?;
+        writeln!(f, "  prompt_fingerprint : {:016x}", self.prompt_fingerprint)?;
+        writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
+        write!(f, "}}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use crate::CardMetadata;
+
+    #[test]
+    fn test_card_metadata_debug() {
+        let path: PathBuf = "/tmp/page.md".into();
+        let prompt_prefix = "What is love? #card".to_owned();
+        let card_metadata = CardMetadata {
+            source_path: &path,
+            prompt_fingerprint: 1,
+            prompt_prefix: prompt_prefix,
+        };
+        let expected = r#"CardMetadata {
+  source_path        : /tmp/page.md
+  prompt_fingerprint : 0000000000000001
+  prompt_prefix      : What is love? #card
+}"#;
+        assert_eq!(format!("{:?}", card_metadata), expected);
+    }
 }
 
 fn fingerprint(s: &str) -> u64 {
@@ -164,15 +197,20 @@ fn extract_card_metadata<'a>(
     file_raw_lines: &[&str],
 ) -> Result<CardMetadata<'a>> {
     let (prompt_lines, _) = destructure_card(card_list_item, file_raw_lines)?;
+
     let prompt_line_first = prompt_lines.first().unwrap_or(&"").to_owned().trim_end();
+    let prompt_indent = prompt_line_first
+        .chars()
+        .take_while(|c| c.is_whitespace())
+        .count();
+    // prompt_indent+2 to strip `- `
+    let prompt_prefix = prompt_line_first
+        .chars()
+        .skip(prompt_indent + 2)
+        .take(64)
+        .collect();
 
     let prompt = prompt_lines.join("\n");
-    let mut prompt_prefix: heapless::String<64> = heapless::String::new();
-    for c in prompt_line_first.chars().take(64) {
-        if prompt_prefix.push(c).is_err() {
-            break;
-        };
-    }
 
     Ok(CardMetadata {
         source_path: path,

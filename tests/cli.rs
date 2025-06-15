@@ -141,9 +141,9 @@ fn single_top_level_card_metadata() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("cards-in-file")
         .arg("--output=metadata")
         .arg(file.path());
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("724424550506611259"));
+    cmd.assert().success().stdout(predicate::str::contains(
+        "prompt_fingerprint : 0a0dac4a5f84c23b",
+    ));
 
     Ok(())
 }
