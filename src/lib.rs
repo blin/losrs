@@ -101,12 +101,12 @@ fn range_from_position(position: &markdown::unist::Position) -> RangeInclusive<u
 // * source_path is potentially used in lots of cards, avoid copying it
 #[allow(dead_code)]
 pub struct CardMetadata<'a> {
-    source_path: &'a Path,
+    pub source_path: &'a Path,
     // prompt_fingerprint is XXH3 64 and will remain valid within the version of logseq_srs,
     // but not necessarily accross.
     // The intended use is to list a set of cards, then immediately act on them one by one.
-    prompt_fingerprint: u64,
-    prompt_prefix: String,
+    pub prompt_fingerprint: u64,
+    pub prompt_prefix: String,
 }
 
 impl Debug for CardMetadata<'_> {
@@ -184,12 +184,12 @@ fn destructure_card<'a>(
     Ok((p_lines, l_lines))
 }
 
-fn extract_card_metadata<'a>(
+fn extract_card<'a>(
     card_list_item: &mdast::ListItem,
     path: &'a Path,
     file_raw_lines: &[&str],
-) -> Result<CardMetadata<'a>> {
-    let (prompt_lines, _) = destructure_card(card_list_item, file_raw_lines)?;
+) -> Result<Card<'a>> {
+    let (prompt_lines, response_lines) = destructure_card(card_list_item, file_raw_lines)?;
 
     let prompt_line_first = prompt_lines.first().unwrap_or(&"").to_owned().trim_end();
     let prompt_indent = prompt_line_first.chars().take_while(|c| c.is_whitespace()).count();
@@ -197,8 +197,16 @@ fn extract_card_metadata<'a>(
     let prompt_prefix = prompt_line_first.chars().skip(prompt_indent + 2).take(64).collect();
 
     let prompt = prompt_lines.join("\n");
+    let response = response_lines.join("\n");
 
-    Ok(CardMetadata { source_path: path, prompt_fingerprint: fingerprint(&prompt), prompt_prefix })
+    Ok(Card {
+        metadata: CardMetadata {
+            source_path: path,
+            prompt_fingerprint: fingerprint(&prompt),
+            prompt_prefix,
+        },
+        body: CardBody { prompt, response },
+    })
 }
 
 pub fn extract_card_metadatas(path: &Path) -> Result<Vec<CardMetadata>> {
@@ -207,29 +215,43 @@ pub fn extract_card_metadatas(path: &Path) -> Result<Vec<CardMetadata>> {
 
     let card_list_items = find_card_list_items(&file_raw)?;
 
-    let card_metadatas = card_list_items
+    let cards = card_list_items
         .iter()
-        .map(|li| extract_card_metadata(li, path, &file_raw_lines))
+        .map(|li| extract_card(li, path, &file_raw_lines))
         .collect::<Result<Vec<_>, _>>()?;
+    let card_metadatas = cards.into_iter().map(|c| c.metadata).collect();
 
     Ok(card_metadatas)
 }
 
-pub fn cards_in_file(path: &Path) -> Result<()> {
+pub struct CardBody {
+    // Both prompt and response are stored as read from file
+    pub prompt: String,
+    pub response: String,
+}
+
+pub struct Card<'a> {
+    metadata: CardMetadata<'a>,
+    body: CardBody,
+}
+
+pub fn extract_card_by_metadata(card_metadata: &CardMetadata) -> Result<CardBody> {
+    let path = card_metadata.source_path;
     let file_raw = fs::read_to_string(path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
 
     let card_list_items = find_card_list_items(&file_raw)?;
 
     for li in card_list_items.as_slice() {
-        let (prompt_lines, response_lines) = destructure_card(li, &file_raw_lines)?;
-        for line in prompt_lines {
-            println!("{}", line);
-        }
-        for line in response_lines {
-            println!("{}", line);
+        let c = extract_card(li, path, &file_raw_lines)?;
+        if c.metadata.prompt_fingerprint == card_metadata.prompt_fingerprint {
+            return Ok(c.body);
         }
     }
-
-    Ok(())
+    Err(anyhow!(
+        "Card with fingerprint {:016x} was not found in {}. Card prompt prefix: {}",
+        card_metadata.prompt_fingerprint,
+        card_metadata.source_path.display(),
+        card_metadata.prompt_prefix
+    ))
 }

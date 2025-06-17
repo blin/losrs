@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result, anyhow};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use logseq_srs::{cards_in_file, extract_card_metadatas};
+use logseq_srs::{extract_card_by_metadata, extract_card_metadatas};
 
 /// Work with Spaced Repetition Cards (SRS) embedded in Logseq pages
 #[derive(Parser)]
@@ -49,12 +49,21 @@ fn main() -> Result<()> {
             if !path.exists() {
                 return Err(anyhow!("{} does not exist", path.display()));
             }
+            let card_metadatas = extract_card_metadatas(&path)
+                .with_context(|| format!("when processing {}", path.display()))?;
             match output {
-                OutputFormat::Plain => cards_in_file(&path)
-                    .with_context(|| format!("when processing {}", path.display()))?,
+                OutputFormat::Plain => {
+                    for cm in card_metadatas {
+                        let cb = extract_card_by_metadata(&cm)
+                            .with_context(|| format!(
+                                "When extract card with fingerprint {:016x} from {}, card with prompt prefix: {}",
+                                cm.prompt_fingerprint, cm.source_path.display(), cm.prompt_prefix
+                            ))?;
+                        println!("{}", cb.prompt);
+                        println!("{}", cb.response);
+                    }
+                }
                 OutputFormat::Metadata => {
-                    let card_metadatas = extract_card_metadatas(&path)
-                        .with_context(|| format!("when processing {}", path.display()))?;
                     for card_metadata in card_metadatas {
                         println!("{:?}", card_metadata);
                     }
