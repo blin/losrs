@@ -6,11 +6,8 @@ use std::path::Path;
 use anyhow::{Result, anyhow};
 use log::warn;
 
-use markdown::{
-    ParseOptions,
-    mdast::{self, Node},
-    to_mdast,
-};
+use markdown::mdast::{self, Node};
+use markdown::{ParseOptions, to_mdast};
 
 fn list_item_is_card(li: &mdast::ListItem) -> bool {
     // A ListItem "is a card" if its first child is a Paragraph whos child is a Text with
@@ -42,11 +39,7 @@ fn list_item_is_card(li: &mdast::ListItem) -> bool {
 
     if let Some(Node::Paragraph(p)) = li.children.first() {
         return p.children.iter().any(|child| {
-            if let Node::Text(text) = child {
-                text.value.contains("#card")
-            } else {
-                false
-            }
+            if let Node::Text(text) = child { text.value.contains("#card") } else { false }
         });
     }
 
@@ -199,24 +192,13 @@ fn extract_card_metadata<'a>(
     let (prompt_lines, _) = destructure_card(card_list_item, file_raw_lines)?;
 
     let prompt_line_first = prompt_lines.first().unwrap_or(&"").to_owned().trim_end();
-    let prompt_indent = prompt_line_first
-        .chars()
-        .take_while(|c| c.is_whitespace())
-        .count();
+    let prompt_indent = prompt_line_first.chars().take_while(|c| c.is_whitespace()).count();
     // prompt_indent+2 to strip `- `
-    let prompt_prefix = prompt_line_first
-        .chars()
-        .skip(prompt_indent + 2)
-        .take(64)
-        .collect();
+    let prompt_prefix = prompt_line_first.chars().skip(prompt_indent + 2).take(64).collect();
 
     let prompt = prompt_lines.join("\n");
 
-    Ok(CardMetadata {
-        source_path: path,
-        prompt_fingerprint: fingerprint(&prompt),
-        prompt_prefix,
-    })
+    Ok(CardMetadata { source_path: path, prompt_fingerprint: fingerprint(&prompt), prompt_prefix })
 }
 
 pub fn extract_card_metadatas(path: &Path) -> Result<Vec<CardMetadata>> {

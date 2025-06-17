@@ -42,9 +42,7 @@ enum OutputFormat {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    env_logger::Builder::new()
-        .filter_level(cli.verbosity.into())
-        .init();
+    env_logger::Builder::new().filter_level(cli.verbosity.into()).init();
 
     match cli.command {
         Commands::CardsInFile { path, output } => {

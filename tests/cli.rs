@@ -104,9 +104,7 @@ fn single_top_level_card_metadata() -> Result<(), Box<dyn std::error::Error>> {
     file.write_str(content)?;
     let mut cmd = cli()?;
 
-    cmd.arg("cards-in-file")
-        .arg("--output=metadata")
-        .arg(file.path());
+    cmd.arg("cards-in-file").arg("--output=metadata").arg(file.path());
     let output = String::from_utf8(cmd.output().unwrap().stdout).unwrap();
 
     insta::with_settings!({
