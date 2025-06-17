@@ -54,7 +54,7 @@ fn list_item_is_card(li: &mdast::ListItem) -> bool {
 }
 
 fn find_card_list_items(file_raw: &str) -> Result<Vec<mdast::ListItem>> {
-    let tree = to_mdast(&file_raw, &ParseOptions::default())
+    let tree = to_mdast(file_raw, &ParseOptions::default())
         .map_err(|x| anyhow!("could not parse markdown: {:?}", x))?;
     let Node::Root(r) = tree else {
         return Err(anyhow!("expected Root node, got: {:?}", tree));
@@ -162,8 +162,11 @@ fn destructure_card<'a>(
     // take until list?
     let (prompt_paragraph, response_list) = match card.children.as_slice() {
         [Node::Paragraph(p), Node::List(l)] => (p, l),
-        [] | _ => {
-            return Err(anyhow!("Expected card to be [Paragraph, List], got []"));
+        _ => {
+            return Err(anyhow!(
+                "Expected card children to be [Paragraph, List], got {:?}",
+                card.children
+            ));
         }
     };
 
@@ -212,7 +215,7 @@ fn extract_card_metadata<'a>(
     Ok(CardMetadata {
         source_path: path,
         prompt_fingerprint: fingerprint(&prompt),
-        prompt_prefix: prompt_prefix,
+        prompt_prefix,
     })
 }
 
