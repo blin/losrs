@@ -1,7 +1,14 @@
 ---
 source: tests/cli.rs
-expression: output
+info:
+  program: logseq-srs
+  args:
+    - cards-in-file
+    - /tmp/.tmp5hwRMD/page.md
 ---
+success: true
+exit_code: 0
+----- stdout -----
 - Какова связь между углами $\\alpha$ и $\\gamma_{1}$ на изображении относительно секущей?
   card-last-interval:: 30.0
   card-repeats:: 6
@@ -12,3 +19,5 @@ expression: output
   https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Transverzala_8.svg/262px-Transverzala_8.svg.png
   #card
   - Они накрест лежащие.
+
+----- stderr -----

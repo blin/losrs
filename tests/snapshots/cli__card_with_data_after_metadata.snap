@@ -1,7 +1,14 @@
 ---
 source: tests/cli.rs
-expression: output
+info:
+  program: logseq-srs
+  args:
+    - cards-in-file
+    - /tmp/.tmphyVtz2/page.md
 ---
+success: true
+exit_code: 0
+----- stdout -----
 - What is the relationship between angles $\\alpha$ and $\\gamma_{1}$ in the picture relative to the transversal?
   card-last-interval:: 30.0
   card-repeats:: 6
@@ -12,3 +19,5 @@ expression: output
   https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Transverzala_8.svg/262px-Transverzala_8.svg.png
   #card
   - They are alternate angles.
+
+----- stderr -----

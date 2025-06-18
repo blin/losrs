@@ -1,7 +1,9 @@
 use assert_fs::prelude::FileWriteStr;
+use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+use std::process::Command;
 
-fn cli() -> Result<assert_cmd::Command, Box<dyn std::error::Error>> {
-    Ok(assert_cmd::Command::cargo_bin("logseq-srs")?)
+fn cli() -> Command {
+    Command::new(get_cargo_bin("logseq-srs"))
 }
 
 #[test]
@@ -21,11 +23,7 @@ fn single_top_level_card() -> Result<(), Box<dyn std::error::Error>> {
 "#;
     file.write_str(content)?;
 
-    let mut cmd = cli()?;
-
-    cmd.arg("cards-in-file").arg(file.path());
-    let output = String::from_utf8(cmd.output().unwrap().stdout).unwrap();
-    insta::assert_snapshot!(output);
+    assert_cmd_snapshot!(cli().arg("cards-in-file").arg(file.path()));
 
     Ok(())
 }
@@ -49,11 +47,7 @@ fn card_with_data_after_metadata() -> Result<(), Box<dyn std::error::Error>> {
 "#;
     file.write_str(content)?;
 
-    let mut cmd = cli()?;
-
-    cmd.arg("cards-in-file").arg(file.path());
-    let output = String::from_utf8(cmd.output().unwrap().stdout).unwrap();
-    insta::assert_snapshot!(output);
+    assert_cmd_snapshot!(cli().arg("cards-in-file").arg(file.path()));
 
     Ok(())
 }
@@ -77,11 +71,7 @@ fn card_with_unicode_prompt() -> Result<(), Box<dyn std::error::Error>> {
 "#;
     file.write_str(content)?;
 
-    let mut cmd = cli()?;
-
-    cmd.arg("cards-in-file").arg(file.path());
-    let output = String::from_utf8(cmd.output().unwrap().stdout).unwrap();
-    insta::assert_snapshot!(output);
+    assert_cmd_snapshot!(cli().arg("cards-in-file").arg(file.path()));
 
     Ok(())
 }
@@ -102,10 +92,6 @@ fn single_top_level_card_metadata() -> Result<(), Box<dyn std::error::Error>> {
 - Not card
 "#;
     file.write_str(content)?;
-    let mut cmd = cli()?;
-
-    cmd.arg("cards-in-file").arg("--output=metadata").arg(file.path());
-    let output = String::from_utf8(cmd.output().unwrap().stdout).unwrap();
 
     insta::with_settings!({
         filters => vec![
@@ -113,7 +99,7 @@ fn single_top_level_card_metadata() -> Result<(), Box<dyn std::error::Error>> {
         ],
     },
     {
-        insta::assert_snapshot!(output);
+        assert_cmd_snapshot!(cli().arg("cards-in-file").arg("--output=metadata").arg(file.path()));
     });
 
     Ok(())

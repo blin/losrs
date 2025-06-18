@@ -1,7 +1,14 @@
 ---
 source: tests/cli.rs
-expression: output
+info:
+  program: logseq-srs
+  args:
+    - cards-in-file
+    - /tmp/.tmpkt6S1P/page.md
 ---
+success: true
+exit_code: 0
+----- stdout -----
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -10,3 +17,5 @@ expression: output
   card-last-reviewed:: 2025-03-22T09:54:57.202Z
   card-last-score:: 5
   - Set of points in a 3 dimensional space that are equidistant from a center point.
+
+----- stderr -----
