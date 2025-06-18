@@ -6,11 +6,30 @@ fn cli() -> Command {
     Command::new(get_cargo_bin("logseq-srs"))
 }
 
-#[test]
-fn single_top_level_card() -> Result<(), Box<dyn std::error::Error>> {
-    let file = assert_fs::NamedTempFile::new("page.md")?;
-    let content = r#"\
-- Not card
+macro_rules! test_card_output {
+    ($name:ident, $cmd:expr, $args:expr, $content:expr ) => {
+        #[test]
+        fn $name() {
+            let file = assert_fs::NamedTempFile::new("page.md").unwrap();
+            file.write_str($content).unwrap();
+
+            insta::with_settings!({
+                filters => vec![
+                    (r"/tmp/.tmp\w+/", "[TMP_DIR]/"),
+                ],
+            },
+            {
+                assert_cmd_snapshot!(cli().arg($cmd).arg(file.path()).args($args));
+            });
+        }
+    };
+}
+
+test_card_output!(
+    single_top_level_card,
+    "cards-in-file",
+    Vec::<String>::new(),
+    r#"\- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -20,19 +39,14 @@ fn single_top_level_card() -> Result<(), Box<dyn std::error::Error>> {
   card-last-score:: 5
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
-"#;
-    file.write_str(content)?;
+"#
+);
 
-    assert_cmd_snapshot!(cli().arg("cards-in-file").arg(file.path()));
-
-    Ok(())
-}
-
-#[test]
-fn card_with_data_after_metadata() -> Result<(), Box<dyn std::error::Error>> {
-    let file = assert_fs::NamedTempFile::new("page.md")?;
-    let content = r#"\
-- Not card
+test_card_output!(
+    card_with_data_after_metadata,
+    "cards-in-file",
+    Vec::<String>::new(),
+    r#"\- Not card
 - What is the relationship between angles $\\alpha$ and $\\gamma_{1}$ in the picture relative to the transversal?
   card-last-interval:: 30.0
   card-repeats:: 6
@@ -44,19 +58,14 @@ fn card_with_data_after_metadata() -> Result<(), Box<dyn std::error::Error>> {
   #card
   - They are alternate angles.
 - Not card
-"#;
-    file.write_str(content)?;
+"#
+);
 
-    assert_cmd_snapshot!(cli().arg("cards-in-file").arg(file.path()));
-
-    Ok(())
-}
-
-#[test]
-fn card_with_unicode_prompt() -> Result<(), Box<dyn std::error::Error>> {
-    let file = assert_fs::NamedTempFile::new("page.md")?;
-    let content = r#"\
-- Not card
+test_card_output!(
+    card_with_unicode_prompt,
+    "cards-in-file",
+    Vec::<String>::new(),
+    r#"\- Not card
 - Какова связь между углами $\\alpha$ и $\\gamma_{1}$ на изображении относительно секущей?
   card-last-interval:: 30.0
   card-repeats:: 6
@@ -68,19 +77,14 @@ fn card_with_unicode_prompt() -> Result<(), Box<dyn std::error::Error>> {
   #card
   - Они накрест лежащие.
 - Not card
-"#;
-    file.write_str(content)?;
+"#
+);
 
-    assert_cmd_snapshot!(cli().arg("cards-in-file").arg(file.path()));
-
-    Ok(())
-}
-
-#[test]
-fn single_top_level_card_metadata() -> Result<(), Box<dyn std::error::Error>> {
-    let file = assert_fs::NamedTempFile::new("page.md")?;
-    let content = r#"\
-- Not card
+test_card_output!(
+    single_top_level_card_metadata,
+    "cards-in-file",
+    vec!["--output=metadata"],
+    r#"\- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -90,17 +94,5 @@ fn single_top_level_card_metadata() -> Result<(), Box<dyn std::error::Error>> {
   card-last-score:: 5
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
-"#;
-    file.write_str(content)?;
-
-    insta::with_settings!({
-        filters => vec![
-            (r"/tmp/.tmp\w+/", "[TMP_DIR]/"),
-        ],
-    },
-    {
-        assert_cmd_snapshot!(cli().arg("cards-in-file").arg("--output=metadata").arg(file.path()));
-    });
-
-    Ok(())
-}
+"#
+);
