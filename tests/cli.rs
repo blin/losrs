@@ -27,7 +27,7 @@ macro_rules! test_card_output {
 
 test_card_output!(
     single_top_level_card,
-    "cards-in-file",
+    "show",
     Vec::<String>::new(),
     r#"\- Not card
 - What is a sphere? #card
@@ -44,7 +44,7 @@ test_card_output!(
 
 test_card_output!(
     card_with_data_after_metadata,
-    "cards-in-file",
+    "show",
     Vec::<String>::new(),
     r#"\- Not card
 - What is the relationship between angles $\\alpha$ and $\\gamma_{1}$ in the picture relative to the transversal?
@@ -63,7 +63,7 @@ test_card_output!(
 
 test_card_output!(
     card_with_unicode_prompt,
-    "cards-in-file",
+    "show",
     Vec::<String>::new(),
     r#"\- Not card
 - Какова связь между углами $\\alpha$ и $\\gamma_{1}$ на изображении относительно секущей?
@@ -82,8 +82,8 @@ test_card_output!(
 
 test_card_output!(
     single_top_level_card_metadata,
-    "cards-in-file",
-    vec!["--output=metadata"],
+    "metadata",
+    Vec::<String>::new(),
     r#"\- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14

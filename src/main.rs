@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result, anyhow};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand};
 
 use logseq_srs::{extract_card_by_ref, extract_card_metadatas};
 
@@ -15,29 +15,24 @@ struct Cli {
     command: Commands,
 }
 
+#[derive(Args)]
+struct CardRefArgs {
+    /// The path to the file to read
+    path: PathBuf,
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// prints cards in a file
-    CardsInFile {
-        /// The path to the file to read
-        path: PathBuf,
-
-        #[arg(
-            long,
-            //value_name = "WHEN",
-            num_args = 0..=1,
-            default_value_t = OutputFormat::Plain,
-            default_missing_value = "plain",
-            value_enum
-        )]
-        output: OutputFormat,
+    Show {
+        #[command(flatten)]
+        card_ref: CardRefArgs,
     },
-}
-
-#[derive(Clone, ValueEnum)]
-enum OutputFormat {
-    Plain,
-    Metadata,
+    /// prints metadata for cards in a file
+    Metadata {
+        #[command(flatten)]
+        card_ref: CardRefArgs,
+    },
 }
 
 fn main() -> Result<()> {
@@ -45,29 +40,32 @@ fn main() -> Result<()> {
     env_logger::Builder::new().filter_level(cli.verbosity.into()).init();
 
     match cli.command {
-        Commands::CardsInFile { path, output } => {
+        Commands::Show { card_ref: CardRefArgs { path } } => {
             if !path.exists() {
                 return Err(anyhow!("{} does not exist", path.display()));
             }
             let card_metadatas = extract_card_metadatas(&path)
                 .with_context(|| format!("when processing {}", path.display()))?;
-            match output {
-                OutputFormat::Plain => {
-                    for cm in card_metadatas {
-                        let card = extract_card_by_ref(&cm.card_ref)
+
+            for cm in card_metadatas {
+                let card = extract_card_by_ref(&cm.card_ref)
                             .with_context(|| format!(
                                 "When extract card with fingerprint {:016x} from {}, card with prompt prefix: {}",
                                 cm.card_ref.prompt_fingerprint, cm.card_ref.source_path.display(), cm.prompt_prefix
                             ))?;
-                        println!("{}", card.body.prompt);
-                        println!("{}", card.body.response);
-                    }
-                }
-                OutputFormat::Metadata => {
-                    for card_metadata in card_metadatas {
-                        println!("{:?}", card_metadata);
-                    }
-                }
+                println!("{}", card.body.prompt);
+                println!("{}", card.body.response);
+            }
+        }
+        Commands::Metadata { card_ref: CardRefArgs { path } } => {
+            if !path.exists() {
+                return Err(anyhow!("{} does not exist", path.display()));
+            }
+            let card_metadatas = extract_card_metadatas(&path)
+                .with_context(|| format!("when processing {}", path.display()))?;
+
+            for card_metadata in card_metadatas {
+                println!("{:?}", card_metadata);
             }
         }
     }
