@@ -99,21 +99,24 @@ fn range_from_position(position: &markdown::unist::Position) -> RangeInclusive<u
 // * I want to be able to hold all card metadata in memory, without holding all card data in memory
 // * I want to be able to load one card at a time and immediately store it back modified
 // * source_path is potentially used in lots of cards, avoid copying it
-#[allow(dead_code)]
-pub struct CardMetadata<'a> {
+pub struct CardRef<'a> {
     pub source_path: &'a Path,
     // prompt_fingerprint is XXH3 64 and will remain valid within the version of logseq_srs,
     // but not necessarily accross.
     // The intended use is to list a set of cards, then immediately act on them one by one.
     pub prompt_fingerprint: u64,
+}
+
+pub struct CardMetadata<'a> {
+    pub card_ref: CardRef<'a>,
     pub prompt_prefix: String,
 }
 
 impl Debug for CardMetadata<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "CardMetadata {{")?;
-        writeln!(f, "  source_path        : {}", self.source_path.display())?;
-        writeln!(f, "  prompt_fingerprint : {:016x}", self.prompt_fingerprint)?;
+        writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
+        writeln!(f, "  prompt_fingerprint : {:016x}", self.card_ref.prompt_fingerprint)?;
         writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
         write!(f, "}}")
     }
@@ -123,15 +126,14 @@ impl Debug for CardMetadata<'_> {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::CardMetadata;
+    use crate::{CardMetadata, CardRef};
 
     #[test]
     fn test_card_metadata_debug() {
         let path: PathBuf = "/tmp/page.md".into();
         let prompt_prefix = "What is love? #card".to_owned();
         let card_metadata = CardMetadata {
-            source_path: &path,
-            prompt_fingerprint: 1,
+            card_ref: CardRef { source_path: &path, prompt_fingerprint: 1 },
             prompt_prefix: prompt_prefix,
         };
         let expected = r#"CardMetadata {
@@ -201,8 +203,7 @@ fn extract_card<'a>(
 
     Ok(Card {
         metadata: CardMetadata {
-            source_path: path,
-            prompt_fingerprint: fingerprint(&prompt),
+            card_ref: CardRef { source_path: path, prompt_fingerprint: fingerprint(&prompt) },
             prompt_prefix,
         },
         body: CardBody { prompt, response },
@@ -231,12 +232,12 @@ pub struct CardBody {
 }
 
 pub struct Card<'a> {
-    metadata: CardMetadata<'a>,
-    body: CardBody,
+    pub metadata: CardMetadata<'a>,
+    pub body: CardBody,
 }
 
-pub fn extract_card_by_metadata(card_metadata: &CardMetadata) -> Result<CardBody> {
-    let path = card_metadata.source_path;
+pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
+    let path = card_ref.source_path;
     let file_raw = fs::read_to_string(path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
 
@@ -244,14 +245,13 @@ pub fn extract_card_by_metadata(card_metadata: &CardMetadata) -> Result<CardBody
 
     for li in card_list_items.as_slice() {
         let c = extract_card(li, path, &file_raw_lines)?;
-        if c.metadata.prompt_fingerprint == card_metadata.prompt_fingerprint {
-            return Ok(c.body);
+        if c.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
+            return Ok(c);
         }
     }
     Err(anyhow!(
-        "Card with fingerprint {:016x} was not found in {}. Card prompt prefix: {}",
-        card_metadata.prompt_fingerprint,
-        card_metadata.source_path.display(),
-        card_metadata.prompt_prefix
+        "Card with fingerprint {:016x} was not found in {}.",
+        card_ref.prompt_fingerprint,
+        card_ref.source_path.display(),
     ))
 }

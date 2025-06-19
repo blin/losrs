@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result, anyhow};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use logseq_srs::{extract_card_by_metadata, extract_card_metadatas};
+use logseq_srs::{extract_card_by_ref, extract_card_metadatas};
 
 /// Work with Spaced Repetition Cards (SRS) embedded in Logseq pages
 #[derive(Parser)]
@@ -54,13 +54,13 @@ fn main() -> Result<()> {
             match output {
                 OutputFormat::Plain => {
                     for cm in card_metadatas {
-                        let cb = extract_card_by_metadata(&cm)
+                        let card = extract_card_by_ref(&cm.card_ref)
                             .with_context(|| format!(
                                 "When extract card with fingerprint {:016x} from {}, card with prompt prefix: {}",
-                                cm.prompt_fingerprint, cm.source_path.display(), cm.prompt_prefix
+                                cm.card_ref.prompt_fingerprint, cm.card_ref.source_path.display(), cm.prompt_prefix
                             ))?;
-                        println!("{}", cb.prompt);
-                        println!("{}", cb.response);
+                        println!("{}", card.body.prompt);
+                        println!("{}", card.body.response);
                     }
                 }
                 OutputFormat::Metadata => {
