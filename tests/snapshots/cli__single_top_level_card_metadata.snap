@@ -4,15 +4,15 @@ info:
   program: logseq-srs
   args:
     - cards-in-file
+    - /tmp/.tmpJBpfOi/page.md
     - "--output=metadata"
-    - /tmp/.tmpkWPTCs/page.md
 ---
 success: true
 exit_code: 0
 ----- stdout -----
 CardMetadata {
   source_path        : [TMP_DIR]/page.md
-  prompt_fingerprint : 219dda4ed3b53642
+  prompt_fingerprint : 0x219dda4ed3b53642
   prompt_prefix      : What is a sphere? #card
 }
 

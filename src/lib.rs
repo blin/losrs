@@ -116,7 +116,7 @@ impl Debug for CardMetadata<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "CardMetadata {{")?;
         writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
-        writeln!(f, "  prompt_fingerprint : {:016x}", self.card_ref.prompt_fingerprint)?;
+        writeln!(f, "  prompt_fingerprint : 0x{:016x}", self.card_ref.prompt_fingerprint)?;
         writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
         write!(f, "}}")
     }
@@ -138,7 +138,7 @@ mod tests {
         };
         let expected = r#"CardMetadata {
   source_path        : /tmp/page.md
-  prompt_fingerprint : 0000000000000001
+  prompt_fingerprint : 0x0000000000000001
   prompt_prefix      : What is love? #card
 }"#;
         assert_eq!(format!("{:?}", card_metadata), expected);
