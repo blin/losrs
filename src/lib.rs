@@ -3,7 +3,7 @@ use std::fs::{self};
 use std::ops::RangeInclusive;
 use std::path::Path;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use log::warn;
 
 use markdown::mdast::{self, Node};
@@ -254,4 +254,23 @@ pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
         card_ref.prompt_fingerprint,
         card_ref.source_path.display(),
     ))
+}
+
+pub fn act_on_card_ref<F>(path: &Path, prompt_fingerprint: Option<u64>, f: F) -> Result<()>
+where
+    F: Fn(&CardMetadata) -> Result<()>,
+{
+    if !path.exists() {
+        return Err(anyhow!("{} does not exist", path.display()));
+    }
+    let mut card_metadatas = extract_card_metadatas(path)
+        .with_context(|| format!("when processing {}", path.display()))?;
+
+    if let Some(prompt_fingerprint) = prompt_fingerprint {
+        card_metadatas.retain(|cm| cm.card_ref.prompt_fingerprint == prompt_fingerprint);
+    }
+    for cm in card_metadatas {
+        f(&cm)?;
+    }
+    Ok(())
 }
