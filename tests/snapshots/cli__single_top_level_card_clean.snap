@@ -1,0 +1,16 @@
+---
+source: tests/cli.rs
+info:
+  program: logseq-srs
+  args:
+    - show
+    - /tmp/.tmpetbQeu/page.md
+    - "--format=clean"
+---
+success: true
+exit_code: 0
+----- stdout -----
+- What is a sphere? #card
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+
+----- stderr -----

@@ -43,6 +43,23 @@ test_card_output!(
 );
 
 test_card_output!(
+    single_top_level_card_clean,
+    "show",
+    vec!["--format=clean"],
+    r#"\- Not card
+- What is a sphere? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#
+);
+
+test_card_output!(
     card_with_data_after_metadata,
     "show",
     Vec::<String>::new(),

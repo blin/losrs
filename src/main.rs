@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use logseq_srs::{act_on_card_ref, extract_card_by_ref};
+
+pub mod output;
 
 /// Work with Spaced Repetition Cards (SRS) embedded in Logseq pages
 #[derive(Parser)]
@@ -31,12 +33,25 @@ struct CardRefArgs {
     prompt_fingerprint: Option<u64>,
 }
 
+#[derive(Clone, ValueEnum)]
+enum OutputFormat {
+    Raw,
+    Clean,
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// prints cards in a file
     Show {
         #[command(flatten)]
         card_ref: CardRefArgs,
+
+        #[arg(
+            long,
+            default_value_t = OutputFormat::Raw,
+            value_enum
+        )]
+        format: OutputFormat,
     },
     /// prints metadata for cards in a file
     Metadata {
@@ -50,15 +65,17 @@ fn main() -> Result<()> {
     env_logger::Builder::new().filter_level(cli.verbosity.into()).init();
 
     match cli.command {
-        Commands::Show { card_ref: CardRefArgs { path, prompt_fingerprint } } => {
+        Commands::Show { card_ref: CardRefArgs { path, prompt_fingerprint }, format } => {
             act_on_card_ref(&path, prompt_fingerprint, |cm| {
                 let card = extract_card_by_ref(&cm.card_ref)
                             .with_context(|| format!(
                                 "When extract card with fingerprint {:016x} from {}, card with prompt prefix: {}",
                                 cm.card_ref.prompt_fingerprint, cm.card_ref.source_path.display(), cm.prompt_prefix
                             ))?;
-                println!("{}", card.body.prompt);
-                println!("{}", card.body.response);
+                match format {
+                    OutputFormat::Raw => output::print_card_raw(&card)?,
+                    OutputFormat::Clean => output::print_card_clean(&card)?,
+                };
                 Ok(())
             })?;
         }
