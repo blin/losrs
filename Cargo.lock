@@ -403,6 +403,7 @@ dependencies = [
  "insta-cmd",
  "log",
  "markdown",
+ "serde",
  "xxhash-rust",
 ]
 
