@@ -37,6 +37,7 @@ struct CardRefArgs {
 enum OutputFormat {
     Raw,
     Clean,
+    Typst,
 }
 
 #[derive(Subcommand)]
@@ -75,6 +76,7 @@ fn main() -> Result<()> {
                 match format {
                     OutputFormat::Raw => output::print_card_raw(&card)?,
                     OutputFormat::Clean => output::print_card_clean(&card)?,
+                    OutputFormat::Typst => output::print_card_typst(&card)?,
                 };
                 Ok(())
             })?;

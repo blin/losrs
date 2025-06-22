@@ -1,0 +1,16 @@
+---
+source: tests/cli.rs
+info:
+  program: logseq-srs
+  args:
+    - show
+    - /tmp/.tmpjplYb3/page.md
+    - "--format=typst"
+---
+success: true
+exit_code: 0
+----- stdout -----
+- What is the antiderivative of $f \( x \) = x^r$ (symbolic)? \#card
+  - $ integral x^r d x = frac(x^(\( r + 1 \)), r + 1) + C $
+
+----- stderr -----
