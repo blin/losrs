@@ -48,6 +48,7 @@ macro_rules! test_card_output {
     ($name:ident, $subcommand:expr, $args:expr, $page:expr ) => {
         #[test]
         fn $name() {
+            // TODO: replace with tempfile::NamedTempFile to have one fewer dependency
             let file = assert_fs::NamedTempFile::new("page.md").unwrap();
             file.write_str($page).unwrap();
 

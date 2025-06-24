@@ -38,6 +38,7 @@ enum OutputFormat {
     Raw,
     Clean,
     Typst,
+    Sixel,
 }
 
 #[derive(Subcommand)]
@@ -77,6 +78,7 @@ fn main() -> Result<()> {
                     OutputFormat::Raw => output::print_card_raw(&card)?,
                     OutputFormat::Clean => output::print_card_clean(&card)?,
                     OutputFormat::Typst => output::print_card_typst(&card)?,
+                    OutputFormat::Sixel => output::print_card_sixel(&card)?,
                 };
                 Ok(())
             })?;

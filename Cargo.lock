@@ -404,6 +404,7 @@ dependencies = [
  "log",
  "markdown",
  "serde",
+ "tempfile",
  "xxhash-rust",
 ]
 
