@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use logseq_srs::{act_on_card_ref, extract_card_by_ref};
+use logseq_srs::act_on_card_ref;
 
 pub mod output;
 
@@ -34,7 +34,7 @@ struct CardRefArgs {
 }
 
 #[derive(Clone, ValueEnum)]
-enum OutputFormat {
+enum OutputFormatArg {
     Raw,
     Clean,
     Typst,
@@ -50,10 +50,10 @@ enum Commands {
 
         #[arg(
             long,
-            default_value_t = OutputFormat::Raw,
+            default_value_t = OutputFormatArg::Raw,
             value_enum
         )]
-        format: OutputFormat,
+        format: OutputFormatArg,
     },
     /// prints metadata for cards in a file
     Metadata {
@@ -69,25 +69,11 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Show { card_ref: CardRefArgs { path, prompt_fingerprint }, format } => {
             act_on_card_ref(&path, prompt_fingerprint, |cm| {
-                let card = extract_card_by_ref(&cm.card_ref)
-                            .with_context(|| format!(
-                                "When extract card with fingerprint {:016x} from {}, card with prompt prefix: {}",
-                                cm.card_ref.prompt_fingerprint, cm.card_ref.source_path.display(), cm.prompt_prefix
-                            ))?;
-                match format {
-                    OutputFormat::Raw => output::print_card_raw(&card)?,
-                    OutputFormat::Clean => output::print_card_clean(&card)?,
-                    OutputFormat::Typst => output::print_card_typst(&card)?,
-                    OutputFormat::Sixel => output::print_card_sixel(&card)?,
-                };
-                Ok(())
+                output::show_card(cm, (&format).into())
             })?;
         }
         Commands::Metadata { card_ref: CardRefArgs { path, prompt_fingerprint } } => {
-            act_on_card_ref(&path, prompt_fingerprint, |cm| {
-                println!("{:?}", cm);
-                Ok(())
-            })?;
+            act_on_card_ref(&path, prompt_fingerprint, output::show_metadata)?;
         }
     }
 

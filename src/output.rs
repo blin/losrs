@@ -6,7 +6,50 @@ use std::process;
 use anyhow::{Context, Result, anyhow};
 use tempfile::NamedTempFile;
 
-use logseq_srs::Card;
+use logseq_srs::{Card, CardMetadata, extract_card_by_ref};
+
+use crate::OutputFormatArg;
+
+pub enum OutputFormat {
+    Raw,
+    Clean,
+    Typst,
+    Sixel,
+}
+
+impl From<&OutputFormatArg> for OutputFormat {
+    fn from(value: &OutputFormatArg) -> Self {
+        match value {
+            OutputFormatArg::Raw => OutputFormat::Raw,
+            OutputFormatArg::Clean => OutputFormat::Clean,
+            OutputFormatArg::Typst => OutputFormat::Typst,
+            OutputFormatArg::Sixel => OutputFormat::Sixel,
+        }
+    }
+}
+
+pub fn show_card(cm: &CardMetadata, format: OutputFormat) -> Result<()> {
+    let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
+        format!(
+            "When extract card with fingerprint {:016x} from {}, card with prompt prefix: {}",
+            cm.card_ref.prompt_fingerprint,
+            cm.card_ref.source_path.display(),
+            cm.prompt_prefix
+        )
+    })?;
+    match format {
+        OutputFormat::Raw => print_card_raw(&card)?,
+        OutputFormat::Clean => print_card_clean(&card)?,
+        OutputFormat::Typst => print_card_typst(&card)?,
+        OutputFormat::Sixel => print_card_sixel(&card)?,
+    };
+    Ok(())
+}
+
+pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
+    println!("{:?}", cm);
+    Ok(())
+}
 
 pub fn print_card_raw(card: &Card) -> Result<()> {
     println!("{}", card.body.prompt);
