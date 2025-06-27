@@ -6,6 +6,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use logseq_srs::act_on_card_ref;
 
 pub mod output;
+pub mod review;
+pub mod terminal;
 
 /// Work with Spaced Repetition Cards (SRS) embedded in Logseq pages
 #[derive(Parser)]
@@ -43,7 +45,7 @@ enum OutputFormatArg {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// prints cards in a file
+    /// print cards
     Show {
         #[command(flatten)]
         card_ref: CardRefArgs,
@@ -55,7 +57,19 @@ enum Commands {
         )]
         format: OutputFormatArg,
     },
-    /// prints metadata for cards in a file
+    /// review cards
+    Review {
+        #[command(flatten)]
+        card_ref: CardRefArgs,
+
+        #[arg(
+            long,
+            default_value_t = OutputFormatArg::Raw,
+            value_enum
+        )]
+        format: OutputFormatArg,
+    },
+    /// prints metadata for cards
     Metadata {
         #[command(flatten)]
         card_ref: CardRefArgs,
@@ -70,6 +84,11 @@ fn main() -> Result<()> {
         Commands::Show { card_ref: CardRefArgs { path, prompt_fingerprint }, format } => {
             act_on_card_ref(&path, prompt_fingerprint, |cm| {
                 output::show_card(cm, (&format).into())
+            })?;
+        }
+        Commands::Review { card_ref: CardRefArgs { path, prompt_fingerprint }, format } => {
+            act_on_card_ref(&path, prompt_fingerprint, |cm| {
+                review::review_card(cm, (&format).into())
             })?;
         }
         Commands::Metadata { card_ref: CardRefArgs { path, prompt_fingerprint } } => {

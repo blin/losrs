@@ -10,6 +10,7 @@ use logseq_srs::{Card, CardMetadata, extract_card_by_ref};
 
 use crate::OutputFormatArg;
 
+#[derive(Clone)]
 pub enum OutputFormat {
     Raw,
     Clean,
