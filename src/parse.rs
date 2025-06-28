@@ -4,6 +4,7 @@ use std::ops::RangeInclusive;
 use std::path::Path;
 
 use anyhow::{Result, anyhow};
+use chrono::{DateTime, FixedOffset};
 use log::warn;
 
 use markdown::mdast::{self, Node};
@@ -125,6 +126,7 @@ pub struct CardRef<'a> {
 pub struct CardMetadata<'a> {
     pub card_ref: CardRef<'a>,
     pub prompt_prefix: String,
+    pub spaced_repetition_metadata: SpacedRepetitionMetadata,
 }
 
 impl Debug for CardMetadata<'_> {
@@ -133,6 +135,11 @@ impl Debug for CardMetadata<'_> {
         writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
         writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
         writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
+        writeln!(f, "  spaced_repetition  : SpacedRepetitionMetadata {{")?;
+        writeln!(f, "    repeats       : {}", self.spaced_repetition_metadata.repeats)?;
+        writeln!(f, "    next_schedule : {:?}", self.spaced_repetition_metadata.next_schedule)?;
+        writeln!(f, "    last_reviewed : {:?}", self.spaced_repetition_metadata.last_reviewed)?;
+        writeln!(f, "  }}")?;
         write!(f, "}}")
     }
 }
@@ -186,6 +193,65 @@ fn is_metadata_line(l: &str) -> bool {
     l.trim_start().starts_with("card-")
 }
 
+// Logseq standard format:
+//   card-last-interval:: 39.06
+//   card-repeats:: 4
+//   card-ease-factor:: 1.0
+//   card-next-schedule:: 2025-07-15T00:00:00.000Z
+//   card-last-reviewed:: 2025-06-06T16:24:48.795Z
+//   card-last-score:: 1
+//
+// We don't use most of these
+#[derive(Debug)]
+pub struct SpacedRepetitionMetadata {
+    pub repeats: u8,
+    pub next_schedule: DateTime<FixedOffset>,
+    pub last_reviewed: DateTime<FixedOffset>,
+}
+
+impl Default for SpacedRepetitionMetadata {
+    fn default() -> Self {
+        Self {
+            repeats: 0,
+            next_schedule: DateTime::UNIX_EPOCH.fixed_offset(),
+            last_reviewed: DateTime::UNIX_EPOCH.fixed_offset(),
+        }
+    }
+}
+
+impl SpacedRepetitionMetadata {
+    fn from_prompt(prompt: &str) -> Result<Self> {
+        let mut repeats: Option<u8> = None;
+        let mut next_schedule: Option<DateTime<FixedOffset>> = None;
+        let mut last_reviewed: Option<DateTime<FixedOffset>> = None;
+
+        for line in prompt.split("\n") {
+            let Some((k, v)) = line.trim().split_once(":: ") else {
+                continue;
+            };
+            match k {
+                "card-repeats" => {
+                    repeats = Some(v.parse()?);
+                }
+                "card-next-schedule" => {
+                    next_schedule = Some(DateTime::parse_from_rfc3339(v)?);
+                }
+                "card-last-reviewed" => {
+                    last_reviewed = Some(DateTime::parse_from_rfc3339(v)?);
+                }
+                _ => {}
+            };
+        }
+        if let (Some(repeats), Some(next_schedule), Some(last_reviewed)) =
+            (repeats, next_schedule, last_reviewed)
+        {
+            Ok(SpacedRepetitionMetadata { repeats, next_schedule, last_reviewed })
+        } else {
+            Ok(SpacedRepetitionMetadata::default())
+        }
+    }
+}
+
 fn extract_card<'a>(
     card_list_item: &mdast::ListItem,
     path: &'a Path,
@@ -206,6 +272,7 @@ fn extract_card<'a>(
         metadata: CardMetadata {
             card_ref: CardRef { source_path: path, prompt_fingerprint: fingerprint(&clean_prompt) },
             prompt_prefix,
+            spaced_repetition_metadata: SpacedRepetitionMetadata::from_prompt(&prompt)?,
         },
         body: CardBody { prompt, response },
     })
@@ -261,7 +328,7 @@ pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::parse::{CardMetadata, CardRef};
+    use crate::parse::{CardMetadata, CardRef, SpacedRepetitionMetadata};
 
     #[test]
     fn test_card_metadata_debug() {
@@ -270,11 +337,17 @@ mod tests {
         let card_metadata = CardMetadata {
             card_ref: CardRef { source_path: &path, prompt_fingerprint: 1.into() },
             prompt_prefix: prompt_prefix,
+            spaced_repetition_metadata: SpacedRepetitionMetadata::default(),
         };
         let expected = r#"CardMetadata {
   source_path        : /tmp/page.md
   prompt_fingerprint : 0x0000000000000001
   prompt_prefix      : What is love? #card
+  spaced_repetition  : SpacedRepetitionMetadata {
+    repeats       : 0
+    next_schedule : 1970-01-01T00:00:00+00:00
+    last_reviewed : 1970-01-01T00:00:00+00:00
+  }
 }"#;
         assert_eq!(format!("{:?}", card_metadata), expected);
     }

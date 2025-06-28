@@ -4,9 +4,9 @@ info:
   program: logseq-srs
   args:
     - metadata
-    - /tmp/.tmp3nBoda/page.md
+    - /tmp/.tmpqsZUX7/page.md
   page_lines:
-    - "\\- Not card"
+    - "- Not card"
     - "- What is a sphere? #card"
     - "  card-last-interval:: 244.14"
     - "  card-repeats:: 6"
@@ -25,6 +25,11 @@ CardMetadata {
   source_path        : [TMP_DIR]/page.md
   prompt_fingerprint : 0xb9de554a02212aca
   prompt_prefix      : What is a sphere? #card
+  spaced_repetition  : SpacedRepetitionMetadata {
+    repeats       : 6
+    next_schedule : 2025-11-21T00:00:00+00:00
+    last_reviewed : 2025-03-22T09:54:57.202+00:00
+  }
 }
 
 ----- stderr -----
