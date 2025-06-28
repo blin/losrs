@@ -8,7 +8,7 @@ use crate::terminal::{clear_screen, wait_for_anykey, wait_for_review};
 pub fn review_card(cm: &CardMetadata, format: OutputFormat) -> Result<()> {
     clear_screen()?;
     println!(
-        "Reviewing 0x{:016x} from {}",
+        "Reviewing {} from {}",
         cm.card_ref.prompt_fingerprint,
         cm.card_ref.source_path.display()
     );

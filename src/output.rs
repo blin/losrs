@@ -32,7 +32,7 @@ impl From<&OutputFormatArg> for OutputFormat {
 pub fn show_card(cm: &CardMetadata, format: OutputFormat) -> Result<()> {
     let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
         format!(
-            "When extract card with fingerprint {:016x} from {}, card with prompt prefix: {}",
+            "When extracting card with fingerprint {} from {}, card with prompt prefix: {}",
             cm.card_ref.prompt_fingerprint,
             cm.card_ref.source_path.display(),
             cm.prompt_prefix

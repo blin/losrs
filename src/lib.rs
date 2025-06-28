@@ -95,6 +95,21 @@ fn range_from_position(position: &markdown::unist::Position) -> RangeInclusive<u
     RangeInclusive::new(position.start.line - 1, position.end.line - 1)
 }
 
+#[derive(PartialEq, Clone)]
+pub struct Fingerprint(pub u64);
+
+impl std::fmt::Display for Fingerprint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "0x{:016x}", self.0)
+    }
+}
+
+impl From<u64> for Fingerprint {
+    fn from(value: u64) -> Self {
+        Fingerprint(value)
+    }
+}
+
 // Some considerations
 // * I want to be able to hold all card metadata in memory, without holding all card data in memory
 // * I want to be able to load one card at a time and immediately store it back modified
@@ -104,7 +119,7 @@ pub struct CardRef<'a> {
     // prompt_fingerprint is XXH3 64 and will remain valid within the version of logseq_srs,
     // but not necessarily accross.
     // The intended use is to list a set of cards, then immediately act on them one by one.
-    pub prompt_fingerprint: u64,
+    pub prompt_fingerprint: Fingerprint,
 }
 
 pub struct CardMetadata<'a> {
@@ -116,7 +131,7 @@ impl Debug for CardMetadata<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "CardMetadata {{")?;
         writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
-        writeln!(f, "  prompt_fingerprint : 0x{:016x}", self.card_ref.prompt_fingerprint)?;
+        writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
         writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
         write!(f, "}}")
     }
@@ -133,7 +148,7 @@ mod tests {
         let path: PathBuf = "/tmp/page.md".into();
         let prompt_prefix = "What is love? #card".to_owned();
         let card_metadata = CardMetadata {
-            card_ref: CardRef { source_path: &path, prompt_fingerprint: 1 },
+            card_ref: CardRef { source_path: &path, prompt_fingerprint: 1.into() },
             prompt_prefix: prompt_prefix,
         };
         let expected = r#"CardMetadata {
@@ -145,8 +160,8 @@ mod tests {
     }
 }
 
-fn fingerprint(s: &str) -> u64 {
-    xxhash_rust::xxh3::xxh3_64(s.as_bytes())
+fn fingerprint(s: &str) -> Fingerprint {
+    xxhash_rust::xxh3::xxh3_64(s.as_bytes()).into()
 }
 
 fn destructure_card<'a>(
@@ -250,13 +265,13 @@ pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
         }
     }
     Err(anyhow!(
-        "Card with fingerprint {:016x} was not found in {}.",
+        "Card with fingerprint {} was not found in {}.",
         card_ref.prompt_fingerprint,
         card_ref.source_path.display(),
     ))
 }
 
-pub fn act_on_card_ref<F>(path: &Path, prompt_fingerprint: Option<u64>, f: F) -> Result<()>
+pub fn act_on_card_ref<F>(path: &Path, prompt_fingerprint: Option<Fingerprint>, f: F) -> Result<()>
 where
     F: Fn(&CardMetadata) -> Result<()>,
 {

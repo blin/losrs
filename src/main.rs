@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use logseq_srs::act_on_card_ref;
+use logseq_srs::{Fingerprint, act_on_card_ref};
 
 pub mod output;
 pub mod review;
@@ -19,9 +19,9 @@ struct Cli {
     command: Commands,
 }
 
-fn parse_hex(src: &str) -> Result<u64> {
+fn parse_hex(src: &str) -> Result<Fingerprint> {
     let s = src.trim_start_matches("0x");
-    Ok(u64::from_str_radix(s, 16)?)
+    Ok(u64::from_str_radix(s, 16)?.into())
 }
 
 #[derive(Args)]
@@ -32,7 +32,7 @@ struct CardRefArgs {
     /// Fingerprint of the card's prompt.
     /// Use metadata command to find one.
     #[arg(value_parser = parse_hex)]
-    prompt_fingerprint: Option<u64>,
+    prompt_fingerprint: Option<Fingerprint>,
 }
 
 #[derive(Clone, ValueEnum)]
