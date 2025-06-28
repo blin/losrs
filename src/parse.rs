@@ -3,7 +3,7 @@ use std::fs::{self};
 use std::ops::RangeInclusive;
 use std::path::Path;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use log::warn;
 
 use markdown::mdast::{self, Node};
@@ -116,7 +116,7 @@ impl From<u64> for Fingerprint {
 // * source_path is potentially used in lots of cards, avoid copying it
 pub struct CardRef<'a> {
     pub source_path: &'a Path,
-    // prompt_fingerprint is XXH3 64 and will remain valid within the version of logseq_srs,
+    // prompt_fingerprint is XXH3 64 and will remain valid within the version of the crate,
     // but not necessarily accross.
     // The intended use is to list a set of cards, then immediately act on them one by one.
     pub prompt_fingerprint: Fingerprint,
@@ -134,29 +134,6 @@ impl Debug for CardMetadata<'_> {
         writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
         writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
         write!(f, "}}")
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    use crate::{CardMetadata, CardRef};
-
-    #[test]
-    fn test_card_metadata_debug() {
-        let path: PathBuf = "/tmp/page.md".into();
-        let prompt_prefix = "What is love? #card".to_owned();
-        let card_metadata = CardMetadata {
-            card_ref: CardRef { source_path: &path, prompt_fingerprint: 1.into() },
-            prompt_prefix: prompt_prefix,
-        };
-        let expected = r#"CardMetadata {
-  source_path        : /tmp/page.md
-  prompt_fingerprint : 0x0000000000000001
-  prompt_prefix      : What is love? #card
-}"#;
-        assert_eq!(format!("{:?}", card_metadata), expected);
     }
 }
 
@@ -271,21 +248,25 @@ pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
     ))
 }
 
-pub fn act_on_card_ref<F>(path: &Path, prompt_fingerprint: Option<Fingerprint>, f: F) -> Result<()>
-where
-    F: Fn(&CardMetadata) -> Result<()>,
-{
-    if !path.exists() {
-        return Err(anyhow!("{} does not exist", path.display()));
-    }
-    let mut card_metadatas = extract_card_metadatas(path)
-        .with_context(|| format!("when processing {}", path.display()))?;
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
 
-    if let Some(prompt_fingerprint) = prompt_fingerprint {
-        card_metadatas.retain(|cm| cm.card_ref.prompt_fingerprint == prompt_fingerprint);
+    use crate::parse::{CardMetadata, CardRef};
+
+    #[test]
+    fn test_card_metadata_debug() {
+        let path: PathBuf = "/tmp/page.md".into();
+        let prompt_prefix = "What is love? #card".to_owned();
+        let card_metadata = CardMetadata {
+            card_ref: CardRef { source_path: &path, prompt_fingerprint: 1.into() },
+            prompt_prefix: prompt_prefix,
+        };
+        let expected = r#"CardMetadata {
+  source_path        : /tmp/page.md
+  prompt_fingerprint : 0x0000000000000001
+  prompt_prefix      : What is love? #card
+}"#;
+        assert_eq!(format!("{:?}", card_metadata), expected);
     }
-    for cm in card_metadatas {
-        f(&cm)?;
-    }
-    Ok(())
 }

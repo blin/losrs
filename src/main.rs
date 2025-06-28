@@ -1,11 +1,13 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use anyhow::Result;
+use anyhow::{Context, Result, anyhow};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use logseq_srs::{Fingerprint, act_on_card_ref};
+use crate::output::OutputFormat;
+use crate::parse::{CardMetadata, Fingerprint, extract_card_metadatas};
 
 pub mod output;
+pub mod parse;
 pub mod review;
 pub mod terminal;
 
@@ -43,6 +45,17 @@ enum OutputFormatArg {
     Sixel,
 }
 
+impl From<&OutputFormatArg> for OutputFormat {
+    fn from(value: &OutputFormatArg) -> Self {
+        match value {
+            OutputFormatArg::Raw => OutputFormat::Raw,
+            OutputFormatArg::Clean => OutputFormat::Clean,
+            OutputFormatArg::Typst => OutputFormat::Typst,
+            OutputFormatArg::Sixel => OutputFormat::Sixel,
+        }
+    }
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// print cards
@@ -74,6 +87,25 @@ enum Commands {
         #[command(flatten)]
         card_ref: CardRefArgs,
     },
+}
+
+pub fn act_on_card_ref<F>(path: &Path, prompt_fingerprint: Option<Fingerprint>, f: F) -> Result<()>
+where
+    F: Fn(&CardMetadata) -> Result<()>,
+{
+    if !path.exists() {
+        return Err(anyhow!("{} does not exist", path.display()));
+    }
+    let mut card_metadatas = extract_card_metadatas(path)
+        .with_context(|| format!("when processing {}", path.display()))?;
+
+    if let Some(prompt_fingerprint) = prompt_fingerprint {
+        card_metadatas.retain(|cm| cm.card_ref.prompt_fingerprint == prompt_fingerprint);
+    }
+    for cm in card_metadatas {
+        f(&cm)?;
+    }
+    Ok(())
 }
 
 fn main() -> Result<()> {

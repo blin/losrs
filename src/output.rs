@@ -6,9 +6,7 @@ use std::process;
 use anyhow::{Context, Result, anyhow};
 use tempfile::NamedTempFile;
 
-use logseq_srs::{Card, CardMetadata, extract_card_by_ref};
-
-use crate::OutputFormatArg;
+use crate::parse::{Card, CardMetadata, extract_card_by_ref};
 
 #[derive(Clone)]
 pub enum OutputFormat {
@@ -16,17 +14,6 @@ pub enum OutputFormat {
     Clean,
     Typst,
     Sixel,
-}
-
-impl From<&OutputFormatArg> for OutputFormat {
-    fn from(value: &OutputFormatArg) -> Self {
-        match value {
-            OutputFormatArg::Raw => OutputFormat::Raw,
-            OutputFormatArg::Clean => OutputFormat::Clean,
-            OutputFormatArg::Typst => OutputFormat::Typst,
-            OutputFormatArg::Sixel => OutputFormat::Sixel,
-        }
-    }
 }
 
 pub fn show_card(cm: &CardMetadata, format: OutputFormat) -> Result<()> {

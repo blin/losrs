@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use logseq_srs::CardMetadata;
+use crate::parse::CardMetadata;
 
 use crate::output::{OutputFormat, show_card};
 use crate::terminal::{clear_screen, wait_for_anykey, wait_for_review};
