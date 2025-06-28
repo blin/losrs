@@ -74,7 +74,7 @@ test_card_output!(
     single_top_level_card,
     "show",
     Vec::<String>::new(),
-    r#"\- Not card
+    r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -91,7 +91,7 @@ test_card_output!(
     single_top_level_card_clean,
     "show",
     vec!["--format=clean"],
-    r#"\- Not card
+    r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -108,7 +108,7 @@ test_card_output!(
     single_top_level_card_typst,
     "show",
     vec!["--format=typst"],
-    r#"\- Not card
+    r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -125,7 +125,7 @@ test_card_output!(
     card_with_data_after_metadata,
     "show",
     Vec::<String>::new(),
-    r#"\- Not card
+    r#"- Not card
 - What is the relationship between angles $\\alpha$ and $\\gamma_{1}$ in the picture relative to the transversal?
   card-last-interval:: 30.0
   card-repeats:: 6
@@ -144,7 +144,7 @@ test_card_output!(
     card_with_unicode_prompt,
     "show",
     Vec::<String>::new(),
-    r#"\- Not card
+    r#"- Not card
 - Какова связь между углами $\\alpha$ и $\\gamma_{1}$ на изображении относительно секущей?
   card-last-interval:: 30.0
   card-repeats:: 6
@@ -163,7 +163,7 @@ test_card_output!(
     single_top_level_card_metadata,
     "metadata",
     Vec::<String>::new(),
-    r#"\- Not card
+    r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -179,8 +179,8 @@ test_card_output!(
 test_card_output!(
     one_of_top_level_cards,
     "show",
-    vec!["0x219dda4ed3b53642"],
-    r#"\- Not card
+    vec!["0xb9de554a02212aca"],
+    r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6

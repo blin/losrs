@@ -6,7 +6,7 @@ use std::process;
 use anyhow::{Context, Result, anyhow};
 use tempfile::NamedTempFile;
 
-use crate::parse::{Card, CardMetadata, extract_card_by_ref};
+use crate::parse::{Card, CardMetadata, extract_card_by_ref, strip_prompt_metadata};
 
 #[derive(Clone)]
 pub enum OutputFormat {
@@ -50,14 +50,6 @@ pub fn print_card_clean(card: &Card) -> Result<()> {
     println!("{}", clean_prompt);
     println!("{}", card.body.response);
     Ok(())
-}
-
-fn strip_prompt_metadata(prompt: &str) -> String {
-    prompt.split("\n").filter(|l| !is_metadata_line(l)).collect::<Vec<_>>().join("\n")
-}
-
-fn is_metadata_line(l: &str) -> bool {
-    l.trim_start().starts_with("card-")
 }
 
 pub fn print_card_typst(card: &Card) -> Result<()> {

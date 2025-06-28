@@ -178,6 +178,14 @@ fn destructure_card<'a>(
     Ok((p_lines, l_lines))
 }
 
+pub fn strip_prompt_metadata(prompt: &str) -> String {
+    prompt.split("\n").filter(|l| !is_metadata_line(l)).collect::<Vec<_>>().join("\n")
+}
+
+fn is_metadata_line(l: &str) -> bool {
+    l.trim_start().starts_with("card-")
+}
+
 fn extract_card<'a>(
     card_list_item: &mdast::ListItem,
     path: &'a Path,
@@ -191,11 +199,12 @@ fn extract_card<'a>(
     let prompt_prefix = prompt_line_first.chars().skip(prompt_indent + 2).take(64).collect();
 
     let prompt = prompt_lines.join("\n");
+    let clean_prompt = strip_prompt_metadata(&prompt);
     let response = response_lines.join("\n");
 
     Ok(Card {
         metadata: CardMetadata {
-            card_ref: CardRef { source_path: path, prompt_fingerprint: fingerprint(&prompt) },
+            card_ref: CardRef { source_path: path, prompt_fingerprint: fingerprint(&clean_prompt) },
             prompt_prefix,
         },
         body: CardBody { prompt, response },
