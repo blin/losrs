@@ -126,7 +126,7 @@ pub struct CardRef<'a> {
 pub struct CardMetadata<'a> {
     pub card_ref: CardRef<'a>,
     pub prompt_prefix: String,
-    pub spaced_repetition_metadata: SpacedRepetitionMetadata,
+    pub srs_meta: SRSMeta,
 }
 
 impl Debug for CardMetadata<'_> {
@@ -135,10 +135,10 @@ impl Debug for CardMetadata<'_> {
         writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
         writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
         writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
-        writeln!(f, "  spaced_repetition  : SpacedRepetitionMetadata {{")?;
-        writeln!(f, "    repeats       : {}", self.spaced_repetition_metadata.repeats)?;
-        writeln!(f, "    next_schedule : {:?}", self.spaced_repetition_metadata.next_schedule)?;
-        writeln!(f, "    last_reviewed : {:?}", self.spaced_repetition_metadata.last_reviewed)?;
+        writeln!(f, "  srs_meta           : SRSMeta {{")?;
+        writeln!(f, "    repeats       : {}", self.srs_meta.repeats)?;
+        writeln!(f, "    next_schedule : {:?}", self.srs_meta.next_schedule)?;
+        writeln!(f, "    last_reviewed : {:?}", self.srs_meta.last_reviewed)?;
         writeln!(f, "  }}")?;
         write!(f, "}}")
     }
@@ -202,6 +202,8 @@ fn is_metadata_line(l: &str) -> bool {
     l.trim_start().starts_with("card-")
 }
 
+// Spaced Repetition System (SRS) Metadata
+//
 // Logseq standard format:
 //   card-last-interval:: 39.06
 //   card-repeats:: 4
@@ -214,7 +216,7 @@ fn is_metadata_line(l: &str) -> bool {
 // but we preserve them anyway to enable simultaneous use with Logseq.
 // The order of properties is from `operation-score!` function in Logseq.
 #[derive(Debug)]
-pub struct SpacedRepetitionMetadata {
+pub struct SRSMeta {
     pub last_interval: f64,
     pub repeats: u8,
     pub ease_factor: f64,
@@ -223,7 +225,7 @@ pub struct SpacedRepetitionMetadata {
     pub last_score: u8,
 }
 
-impl Default for SpacedRepetitionMetadata {
+impl Default for SRSMeta {
     fn default() -> Self {
         Self {
             last_interval: -1.0,
@@ -236,9 +238,9 @@ impl Default for SpacedRepetitionMetadata {
     }
 }
 
-impl SpacedRepetitionMetadata {
+impl SRSMeta {
     fn from_prompt_lines(prompt_lines: &[&str]) -> Result<Self> {
-        let mut srm = SpacedRepetitionMetadata::default();
+        let mut srm = SRSMeta::default();
 
         for line in prompt_lines {
             let Some((k, v)) = line.trim().split_once(":: ") else {
@@ -289,7 +291,7 @@ fn extract_card<'a>(
         metadata: CardMetadata {
             card_ref: CardRef { source_path: path, prompt_fingerprint: fingerprint(&prompt) },
             prompt_prefix,
-            spaced_repetition_metadata: SpacedRepetitionMetadata::from_prompt_lines(prompt_lines)?,
+            srs_meta: SRSMeta::from_prompt_lines(prompt_lines)?,
         },
         body: CardBody { prompt, prompt_indent, response },
     })
@@ -346,7 +348,7 @@ pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::parse::{CardMetadata, CardRef, SpacedRepetitionMetadata};
+    use crate::parse::{CardMetadata, CardRef, SRSMeta};
 
     #[test]
     fn test_card_metadata_debug() {
@@ -355,13 +357,13 @@ mod tests {
         let card_metadata = CardMetadata {
             card_ref: CardRef { source_path: &path, prompt_fingerprint: 1.into() },
             prompt_prefix: prompt_prefix,
-            spaced_repetition_metadata: SpacedRepetitionMetadata::default(),
+            srs_meta: SRSMeta::default(),
         };
         let expected = r#"CardMetadata {
   source_path        : /tmp/page.md
   prompt_fingerprint : 0x0000000000000001
   prompt_prefix      : What is love? #card
-  spaced_repetition  : SpacedRepetitionMetadata {
+  srs_meta           : SRSMeta {
     repeats       : 0
     next_schedule : 1970-01-01T00:00:00+00:00
     last_reviewed : 1970-01-01T00:00:00+00:00

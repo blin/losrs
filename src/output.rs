@@ -190,20 +190,20 @@ fn png_to_sixel(png_buf: Vec<u8>) -> Result<Vec<u8>> {
 pub fn print_card_storage(card: &Card) -> Result<()> {
     println!("{}", card.body.prompt);
 
-    let srm = &card.metadata.spaced_repetition_metadata;
+    let srs_meta = &card.metadata.srs_meta;
     let off_indent = " ".repeat(card.body.prompt_indent + 2);
-    println!("{off_indent}card-last-interval:: {}", srm.last_interval);
-    println!("{off_indent}card-repeats:: {}", srm.repeats);
-    println!("{off_indent}card-ease-factor:: {}", srm.ease_factor);
+    println!("{off_indent}card-last-interval:: {}", srs_meta.last_interval);
+    println!("{off_indent}card-repeats:: {}", srs_meta.repeats);
+    println!("{off_indent}card-ease-factor:: {}", srs_meta.ease_factor);
     println!(
         "{off_indent}card-next-schedule:: {}",
-        srm.next_schedule.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+        srs_meta.next_schedule.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
     );
     println!(
         "{off_indent}card-last-reviewed:: {}",
-        srm.last_reviewed.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+        srs_meta.last_reviewed.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
     );
-    println!("{off_indent}card-last-score:: {}", srm.last_score);
+    println!("{off_indent}card-last-score:: {}", srs_meta.last_score);
 
     println!("{}", card.body.response);
 

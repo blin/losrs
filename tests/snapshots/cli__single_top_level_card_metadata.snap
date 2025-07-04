@@ -25,7 +25,7 @@ CardMetadata {
   source_path        : [TMP_DIR]/page.md
   prompt_fingerprint : 0xb9de554a02212aca
   prompt_prefix      : What is a sphere? #card
-  spaced_repetition  : SpacedRepetitionMetadata {
+  srs_meta           : SRSMeta {
     repeats       : 6
     next_schedule : 2025-11-21T00:00:00+00:00
     last_reviewed : 2025-03-22T09:54:57.202+00:00
