@@ -148,10 +148,9 @@ fn fingerprint(s: &str) -> Fingerprint {
     xxhash_rust::xxh3::xxh3_64(s.as_bytes()).into()
 }
 
-fn destructure_card<'a>(
+fn find_card_ranges(
     card: &mdast::ListItem,
-    file_raw_lines: &'a [&'a str],
-) -> Result<(&'a [&'a str], &'a [&'a str])> {
+) -> Result<(RangeInclusive<usize>, RangeInclusive<usize>)> {
     // TODO: allow multiple paragraphs followed by a list
     // take until list?
     let (prompt_paragraph, response_list) = match card.children.as_slice() {
@@ -169,15 +168,25 @@ fn destructure_card<'a>(
         .as_ref()
         .ok_or_else(|| anyhow!("The p somehow didn't have a position"))?;
     let p_range = range_from_position(p_position);
-    let Some(p_lines) = file_raw_lines.get(p_range) else {
-        return Err(anyhow!("Failed to get prompt lines"));
-    };
 
     let l_position = response_list
         .position
         .as_ref()
         .ok_or_else(|| anyhow!("The p somehow didn't have a position"))?;
     let l_range = range_from_position(l_position);
+
+    Ok((p_range, l_range))
+}
+
+fn destructure_card<'a>(
+    card: &mdast::ListItem,
+    file_raw_lines: &'a [&'a str],
+) -> Result<(&'a [&'a str], &'a [&'a str])> {
+    let (p_range, l_range) = find_card_ranges(card)?;
+    let Some(p_lines) = file_raw_lines.get(p_range) else {
+        return Err(anyhow!("Failed to get prompt lines"));
+    };
+
     let Some(l_lines) = file_raw_lines.get(l_range) else {
         return Err(anyhow!("Failed to get response list lines"));
     };
