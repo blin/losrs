@@ -6,7 +6,7 @@ use std::process;
 use anyhow::{Context, Result, anyhow};
 use tempfile::NamedTempFile;
 
-use crate::parse::{Card, CardMetadata, extract_card_by_ref, strip_prompt_metadata};
+use crate::parse::{Card, CardMetadata, strip_prompt_metadata};
 
 #[derive(Clone)]
 pub enum OutputFormat {
@@ -16,20 +16,12 @@ pub enum OutputFormat {
     Sixel,
 }
 
-pub fn show_card(cm: &CardMetadata, format: OutputFormat) -> Result<()> {
-    let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
-        format!(
-            "When extracting card with fingerprint {} from {}, card with prompt prefix: {}",
-            cm.card_ref.prompt_fingerprint,
-            cm.card_ref.source_path.display(),
-            cm.prompt_prefix
-        )
-    })?;
+pub fn show_card(card: &Card, format: &OutputFormat) -> Result<()> {
     match format {
-        OutputFormat::Raw => print_card_raw(&card)?,
-        OutputFormat::Clean => print_card_clean(&card)?,
-        OutputFormat::Typst => print_card_typst(&card)?,
-        OutputFormat::Sixel => print_card_sixel(&card)?,
+        OutputFormat::Raw => print_card_raw(card)?,
+        OutputFormat::Clean => print_card_clean(card)?,
+        OutputFormat::Typst => print_card_typst(card)?,
+        OutputFormat::Sixel => print_card_sixel(card)?,
     };
     Ok(())
 }

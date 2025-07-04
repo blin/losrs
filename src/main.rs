@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, anyhow};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
-use crate::output::OutputFormat;
-use crate::parse::{CardMetadata, Fingerprint, extract_card_metadatas};
+use crate::output::{OutputFormat, show_card};
+use crate::parse::{CardMetadata, Fingerprint, extract_card_by_ref, extract_card_metadatas};
 
 pub mod output;
 pub mod parse;
@@ -115,7 +115,16 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Show { card_ref: CardRefArgs { path, prompt_fingerprint }, format } => {
             act_on_card_ref(&path, prompt_fingerprint, |cm| {
-                output::show_card(cm, (&format).into())
+                let format = (&format).into();
+                let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
+                    format!(
+                        "When extracting card with fingerprint {} from {}, card with prompt prefix: {}",
+                        cm.card_ref.prompt_fingerprint,
+                        cm.card_ref.source_path.display(),
+                        cm.prompt_prefix
+                    )
+                })?;
+                show_card(&card, &format)
             })?;
         }
         Commands::Review { card_ref: CardRefArgs { path, prompt_fingerprint }, format } => {
