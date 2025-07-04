@@ -194,7 +194,7 @@ fn destructure_card<'a>(
     Ok((p_lines, l_lines))
 }
 
-pub fn strip_prompt_metadata(prompt: &str) -> String {
+fn strip_prompt_metadata(prompt: &str) -> String {
     prompt.split("\n").filter(|l| !is_metadata_line(l)).collect::<Vec<_>>().join("\n")
 }
 
@@ -229,12 +229,12 @@ impl Default for SpacedRepetitionMetadata {
 }
 
 impl SpacedRepetitionMetadata {
-    fn from_prompt(prompt: &str) -> Result<Self> {
+    fn from_prompt_lines(prompt_lines: &[&str]) -> Result<Self> {
         let mut repeats: Option<u8> = None;
         let mut next_schedule: Option<DateTime<FixedOffset>> = None;
         let mut last_reviewed: Option<DateTime<FixedOffset>> = None;
 
-        for line in prompt.split("\n") {
+        for line in prompt_lines {
             let Some((k, v)) = line.trim().split_once(":: ") else {
                 continue;
             };
@@ -273,15 +273,14 @@ fn extract_card<'a>(
     // prompt_indent+2 to strip `- `
     let prompt_prefix = prompt_line_first.chars().skip(prompt_indent + 2).take(64).collect();
 
-    let prompt = prompt_lines.join("\n");
-    let clean_prompt = strip_prompt_metadata(&prompt);
+    let prompt = strip_prompt_metadata(&prompt_lines.join("\n"));
     let response = response_lines.join("\n");
 
     Ok(Card {
         metadata: CardMetadata {
-            card_ref: CardRef { source_path: path, prompt_fingerprint: fingerprint(&clean_prompt) },
+            card_ref: CardRef { source_path: path, prompt_fingerprint: fingerprint(&prompt) },
             prompt_prefix,
-            spaced_repetition_metadata: SpacedRepetitionMetadata::from_prompt(&prompt)?,
+            spaced_repetition_metadata: SpacedRepetitionMetadata::from_prompt_lines(prompt_lines)?,
         },
         body: CardBody { prompt, response },
     })

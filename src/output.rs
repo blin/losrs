@@ -6,7 +6,7 @@ use std::process;
 use anyhow::{Context, Result, anyhow};
 use tempfile::NamedTempFile;
 
-use crate::parse::{Card, CardMetadata, strip_prompt_metadata};
+use crate::parse::{Card, CardMetadata};
 
 #[derive(Clone)]
 pub enum OutputFormat {
@@ -30,15 +30,13 @@ pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
 }
 
 pub fn print_card_clean(card: &Card) -> Result<()> {
-    let clean_prompt = strip_prompt_metadata(&card.body.prompt);
-    println!("{}", clean_prompt);
+    println!("{}", card.body.prompt);
     println!("{}", card.body.response);
     Ok(())
 }
 
 pub fn print_card_typst(card: &Card) -> Result<()> {
-    let clean_prompt = strip_prompt_metadata(&card.body.prompt);
-    let markdown = format!("{}\n{}", clean_prompt, card.body.response);
+    let markdown = format!("{}\n{}", card.body.prompt, card.body.response);
     let typst = markdown_to_typst(markdown)
         .with_context(|| "failed to convert markdown to typst using pandoc".to_owned())?;
     print!("{}", typst);
@@ -46,8 +44,7 @@ pub fn print_card_typst(card: &Card) -> Result<()> {
 }
 
 pub fn print_card_sixel(card: &Card) -> Result<()> {
-    let clean_prompt = strip_prompt_metadata(&card.body.prompt);
-    let markdown = format!("{}\n{}", clean_prompt, card.body.response);
+    let markdown = format!("{}\n{}", card.body.prompt, card.body.response);
 
     let typst = markdown_to_typst(markdown)
         .with_context(|| "failed to convert markdown to typst using pandoc".to_owned())?;
