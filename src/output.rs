@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::io::{self, Read, Write};
+use std::io::{Read, Write};
 use std::path::Path;
 use std::process;
 
@@ -17,12 +17,14 @@ pub enum OutputFormat {
 }
 
 pub fn show_card(card: &Card, format: &OutputFormat) -> Result<()> {
+    let mut result = Vec::new();
     match format {
-        OutputFormat::Clean => print_card_clean(card)?,
-        OutputFormat::Typst => print_card_typst(card)?,
-        OutputFormat::Sixel => print_card_sixel(card)?,
-        OutputFormat::Storage => print_card_storage(card)?,
+        OutputFormat::Clean => format_card_clean(card, &mut result)?,
+        OutputFormat::Typst => format_card_typst(card, &mut result)?,
+        OutputFormat::Sixel => format_card_sixel(card, &mut result)?,
+        OutputFormat::Storage => format_card_storage(card, &mut result)?,
     };
+    print!("{}", String::from_utf8_lossy(&result));
     Ok(())
 }
 
@@ -31,21 +33,21 @@ pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
     Ok(())
 }
 
-pub fn print_card_clean(card: &Card) -> Result<()> {
-    println!("{}", card.body.prompt);
-    println!("{}", card.body.response);
+pub fn format_card_clean(card: &Card, mut writer: impl std::io::Write) -> Result<()> {
+    writeln!(writer, "{}", card.body.prompt)?;
+    writeln!(writer, "{}", card.body.response)?;
     Ok(())
 }
 
-pub fn print_card_typst(card: &Card) -> Result<()> {
+pub fn format_card_typst(card: &Card, mut writer: impl std::io::Write) -> Result<()> {
     let markdown = format!("{}\n{}", card.body.prompt, card.body.response);
     let typst = markdown_to_typst(markdown)
         .with_context(|| "failed to convert markdown to typst using pandoc".to_owned())?;
-    print!("{}", typst);
+    write!(writer, "{}", typst)?;
     Ok(())
 }
 
-pub fn print_card_sixel(card: &Card) -> Result<()> {
+pub fn format_card_sixel(card: &Card, mut writer: impl std::io::Write) -> Result<()> {
     let markdown = format!("{}\n{}", card.body.prompt, card.body.response);
 
     let typst = markdown_to_typst(markdown)
@@ -81,7 +83,7 @@ pub fn print_card_sixel(card: &Card) -> Result<()> {
 
     let sixel_buf = png_to_sixel(png_buf)
         .with_context(|| "failed to convert png to sixel via img2sixel cli".to_owned())?;
-    io::stdout().write_all(&sixel_buf)?;
+    writer.write_all(&sixel_buf)?;
 
     Ok(())
 }
@@ -187,25 +189,27 @@ fn png_to_sixel(png_buf: Vec<u8>) -> Result<Vec<u8>> {
     Ok(output.stdout)
 }
 
-pub fn print_card_storage(card: &Card) -> Result<()> {
-    println!("{}", card.body.prompt);
+pub fn format_card_storage(card: &Card, mut writer: impl std::io::Write) -> Result<()> {
+    writeln!(writer, "{}", card.body.prompt)?;
 
     let srs_meta = &card.metadata.srs_meta;
     let off_indent = " ".repeat(card.body.prompt_indent + 2);
-    println!("{off_indent}card-last-interval:: {}", srs_meta.last_interval);
-    println!("{off_indent}card-repeats:: {}", srs_meta.repeats);
-    println!("{off_indent}card-ease-factor:: {}", srs_meta.ease_factor);
-    println!(
+    writeln!(writer, "{off_indent}card-last-interval:: {}", srs_meta.last_interval)?;
+    writeln!(writer, "{off_indent}card-repeats:: {}", srs_meta.repeats)?;
+    writeln!(writer, "{off_indent}card-ease-factor:: {}", srs_meta.ease_factor)?;
+    writeln!(
+        writer,
         "{off_indent}card-next-schedule:: {}",
         srs_meta.next_schedule.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
-    );
-    println!(
+    )?;
+    writeln!(
+        writer,
         "{off_indent}card-last-reviewed:: {}",
         srs_meta.last_reviewed.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
-    );
-    println!("{off_indent}card-last-score:: {}", srs_meta.last_score);
+    )?;
+    writeln!(writer, "{off_indent}card-last-score:: {}", srs_meta.last_score)?;
 
-    println!("{}", card.body.response);
+    writeln!(writer, "{}", card.body.response)?;
 
     Ok(())
 }
