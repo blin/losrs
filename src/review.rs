@@ -4,6 +4,7 @@ use crate::parse::{CardMetadata, extract_card_by_ref};
 
 use crate::output::{OutputFormat, show_card};
 use crate::terminal::{clear_screen, wait_for_anykey, wait_for_review};
+
 pub fn review_card(cm: &CardMetadata, format: OutputFormat) -> Result<()> {
     let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
         format!(

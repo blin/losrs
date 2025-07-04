@@ -3,19 +3,27 @@ source: tests/cli.rs
 info:
   program: logseq-srs
   args:
-    - cards-in-file
-    - /tmp/.tmphyVtz2/page.md
+    - show
+    - /tmp/.tmp2Ah5Jb/page.md
+  page_lines:
+    - "- Not card"
+    - "- What is the relationship between angles $\\\\alpha$ and $\\\\gamma_{1}$ in the picture relative to the transversal?"
+    - "  card-last-interval:: 30.0"
+    - "  card-repeats:: 6"
+    - "  card-ease-factor:: 2.5"
+    - "  card-next-schedule:: 2026-01-01T00:00:00.000Z"
+    - "  card-last-reviewed:: 2025-12-02T00:00:00.000Z"
+    - "  card-last-score:: 5"
+    - "  https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Transverzala_8.svg/262px-Transverzala_8.svg.png"
+    - "  #card"
+    - "  - They are alternate angles."
+    - "- Not card"
+    - ""
 ---
 success: true
 exit_code: 0
 ----- stdout -----
 - What is the relationship between angles $\\alpha$ and $\\gamma_{1}$ in the picture relative to the transversal?
-  card-last-interval:: 30.0
-  card-repeats:: 6
-  card-ease-factor:: 2.5
-  card-next-schedule:: 2026-01-01T00:00:00.000Z
-  card-last-reviewed:: 2025-12-02T00:00:00.000Z
-  card-last-score:: 5
   https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Transverzala_8.svg/262px-Transverzala_8.svg.png
   #card
   - They are alternate angles.

@@ -39,7 +39,6 @@ struct CardRefArgs {
 
 #[derive(Clone, ValueEnum)]
 enum OutputFormatArg {
-    Raw,
     Clean,
     Typst,
     Sixel,
@@ -48,7 +47,6 @@ enum OutputFormatArg {
 impl From<&OutputFormatArg> for OutputFormat {
     fn from(value: &OutputFormatArg) -> Self {
         match value {
-            OutputFormatArg::Raw => OutputFormat::Raw,
             OutputFormatArg::Clean => OutputFormat::Clean,
             OutputFormatArg::Typst => OutputFormat::Typst,
             OutputFormatArg::Sixel => OutputFormat::Sixel,
@@ -65,7 +63,7 @@ enum Commands {
 
         #[arg(
             long,
-            default_value_t = OutputFormatArg::Raw,
+            default_value_t = OutputFormatArg::Clean,
             value_enum
         )]
         format: OutputFormatArg,
@@ -77,7 +75,7 @@ enum Commands {
 
         #[arg(
             long,
-            default_value_t = OutputFormatArg::Raw,
+            default_value_t = OutputFormatArg::Clean,
             value_enum
         )]
         format: OutputFormatArg,

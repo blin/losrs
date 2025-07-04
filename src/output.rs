@@ -10,7 +10,6 @@ use crate::parse::{Card, CardMetadata, strip_prompt_metadata};
 
 #[derive(Clone)]
 pub enum OutputFormat {
-    Raw,
     Clean,
     Typst,
     Sixel,
@@ -18,7 +17,6 @@ pub enum OutputFormat {
 
 pub fn show_card(card: &Card, format: &OutputFormat) -> Result<()> {
     match format {
-        OutputFormat::Raw => print_card_raw(card)?,
         OutputFormat::Clean => print_card_clean(card)?,
         OutputFormat::Typst => print_card_typst(card)?,
         OutputFormat::Sixel => print_card_sixel(card)?,
@@ -28,12 +26,6 @@ pub fn show_card(card: &Card, format: &OutputFormat) -> Result<()> {
 
 pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
     println!("{:?}", cm);
-    Ok(())
-}
-
-pub fn print_card_raw(card: &Card) -> Result<()> {
-    println!("{}", card.body.prompt);
-    println!("{}", card.body.response);
     Ok(())
 }
 
