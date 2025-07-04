@@ -122,6 +122,51 @@ test_card_output!(
 );
 
 test_card_output!(
+    single_top_level_card_storage,
+    "show",
+    vec!["--format=storage"],
+    r#"- Not card
+- What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-12-28T00:00:00.000Z
+  card-last-reviewed:: 2025-04-28T09:12:30.985Z
+  card-last-score:: 5
+  - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
+- Not card
+"#
+);
+
+test_card_output!(
+    show_card_without_metadata_in_storage_format,
+    "show",
+    vec!["--format=storage"],
+    r#"- Not card
+- What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
+  - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
+- Not card
+"#
+);
+
+test_card_output!(
+    show_card_with_reordered_metadata_in_storage_format,
+    "show",
+    vec!["--format=storage"],
+    r#"- Not card
+- What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
+  card-last-reviewed:: 2025-04-28T09:12:30.985Z
+  card-last-interval:: 244.14
+  card-ease-factor:: 3.1
+  card-last-score:: 5
+  card-repeats:: 6
+  card-next-schedule:: 2025-12-28T00:00:00.000Z
+  - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
+- Not card
+"#
+);
+
+test_card_output!(
     card_with_data_after_metadata,
     "show",
     Vec::<String>::new(),

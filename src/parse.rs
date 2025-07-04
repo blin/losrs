@@ -210,54 +210,63 @@ fn is_metadata_line(l: &str) -> bool {
 //   card-last-reviewed:: 2025-06-06T16:24:48.795Z
 //   card-last-score:: 1
 //
-// We don't use most of these
+// We don't use most of these,
+// but we preserve them anyway to enable simultaneous use with Logseq.
+// The order of properties is from `operation-score!` function in Logseq.
 #[derive(Debug)]
 pub struct SpacedRepetitionMetadata {
+    pub last_interval: f64,
     pub repeats: u8,
+    pub ease_factor: f64,
     pub next_schedule: DateTime<FixedOffset>,
     pub last_reviewed: DateTime<FixedOffset>,
+    pub last_score: u8,
 }
 
 impl Default for SpacedRepetitionMetadata {
     fn default() -> Self {
         Self {
+            last_interval: -1.0,
             repeats: 0,
+            ease_factor: 2.5,
             next_schedule: DateTime::UNIX_EPOCH.fixed_offset(),
             last_reviewed: DateTime::UNIX_EPOCH.fixed_offset(),
+            last_score: 5,
         }
     }
 }
 
 impl SpacedRepetitionMetadata {
     fn from_prompt_lines(prompt_lines: &[&str]) -> Result<Self> {
-        let mut repeats: Option<u8> = None;
-        let mut next_schedule: Option<DateTime<FixedOffset>> = None;
-        let mut last_reviewed: Option<DateTime<FixedOffset>> = None;
+        let mut srm = SpacedRepetitionMetadata::default();
 
         for line in prompt_lines {
             let Some((k, v)) = line.trim().split_once(":: ") else {
                 continue;
             };
             match k {
+                "card-last-interval" => {
+                    srm.last_interval = v.parse()?;
+                }
                 "card-repeats" => {
-                    repeats = Some(v.parse()?);
+                    srm.repeats = v.parse()?;
+                }
+                "card-ease-factor" => {
+                    srm.ease_factor = v.parse()?;
                 }
                 "card-next-schedule" => {
-                    next_schedule = Some(DateTime::parse_from_rfc3339(v)?);
+                    srm.next_schedule = DateTime::parse_from_rfc3339(v)?;
                 }
                 "card-last-reviewed" => {
-                    last_reviewed = Some(DateTime::parse_from_rfc3339(v)?);
+                    srm.last_reviewed = DateTime::parse_from_rfc3339(v)?;
+                }
+                "card-last-score" => {
+                    srm.last_score = v.parse()?;
                 }
                 _ => {}
             };
         }
-        if let (Some(repeats), Some(next_schedule), Some(last_reviewed)) =
-            (repeats, next_schedule, last_reviewed)
-        {
-            Ok(SpacedRepetitionMetadata { repeats, next_schedule, last_reviewed })
-        } else {
-            Ok(SpacedRepetitionMetadata::default())
-        }
+        Ok(srm)
     }
 }
 
@@ -282,7 +291,7 @@ fn extract_card<'a>(
             prompt_prefix,
             spaced_repetition_metadata: SpacedRepetitionMetadata::from_prompt_lines(prompt_lines)?,
         },
-        body: CardBody { prompt, response },
+        body: CardBody { prompt, prompt_indent, response },
     })
 }
 
@@ -304,6 +313,7 @@ pub fn extract_card_metadatas(path: &Path) -> Result<Vec<CardMetadata>> {
 pub struct CardBody {
     // Both prompt and response are stored as read from file
     pub prompt: String,
+    pub prompt_indent: usize,
     pub response: String,
 }
 

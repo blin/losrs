@@ -13,6 +13,7 @@ pub enum OutputFormat {
     Clean,
     Typst,
     Sixel,
+    Storage,
 }
 
 pub fn show_card(card: &Card, format: &OutputFormat) -> Result<()> {
@@ -20,6 +21,7 @@ pub fn show_card(card: &Card, format: &OutputFormat) -> Result<()> {
         OutputFormat::Clean => print_card_clean(card)?,
         OutputFormat::Typst => print_card_typst(card)?,
         OutputFormat::Sixel => print_card_sixel(card)?,
+        OutputFormat::Storage => print_card_storage(card)?,
     };
     Ok(())
 }
@@ -183,4 +185,27 @@ fn png_to_sixel(png_buf: Vec<u8>) -> Result<Vec<u8>> {
     }
 
     Ok(output.stdout)
+}
+
+pub fn print_card_storage(card: &Card) -> Result<()> {
+    println!("{}", card.body.prompt);
+
+    let srm = &card.metadata.spaced_repetition_metadata;
+    let off_indent = " ".repeat(card.body.prompt_indent + 2);
+    println!("{off_indent}card-last-interval:: {}", srm.last_interval);
+    println!("{off_indent}card-repeats:: {}", srm.repeats);
+    println!("{off_indent}card-ease-factor:: {}", srm.ease_factor);
+    println!(
+        "{off_indent}card-next-schedule:: {}",
+        srm.next_schedule.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+    );
+    println!(
+        "{off_indent}card-last-reviewed:: {}",
+        srm.last_reviewed.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+    );
+    println!("{off_indent}card-last-score:: {}", srm.last_score);
+
+    println!("{}", card.body.response);
+
+    Ok(())
 }

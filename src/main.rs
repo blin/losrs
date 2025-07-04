@@ -42,6 +42,7 @@ enum OutputFormatArg {
     Clean,
     Typst,
     Sixel,
+    Storage,
 }
 
 impl From<&OutputFormatArg> for OutputFormat {
@@ -50,6 +51,7 @@ impl From<&OutputFormatArg> for OutputFormat {
             OutputFormatArg::Clean => OutputFormat::Clean,
             OutputFormatArg::Typst => OutputFormat::Typst,
             OutputFormatArg::Sixel => OutputFormat::Sixel,
+            OutputFormatArg::Storage => OutputFormat::Storage,
         }
     }
 }

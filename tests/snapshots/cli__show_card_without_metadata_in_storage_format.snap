@@ -1,0 +1,28 @@
+---
+source: tests/cli.rs
+info:
+  program: logseq-srs
+  args:
+    - show
+    - /tmp/.tmpvczQ7T/page.md
+    - "--format=storage"
+  page_lines:
+    - "- Not card"
+    - "- What is the antiderivative of $f(x) = x^r$ (symbolic)? #card"
+    - "  - $$\\int{x^r dx} = \\frac{x^{(r+1)}}{r+1} + C$$"
+    - "- Not card"
+    - ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+- What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
+  card-last-interval:: -1
+  card-repeats:: 0
+  card-ease-factor:: 2.5
+  card-next-schedule:: 1970-01-01T00:00:00.000Z
+  card-last-reviewed:: 1970-01-01T00:00:00.000Z
+  card-last-score:: 5
+  - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
+
+----- stderr -----
