@@ -6,7 +6,7 @@ use std::process;
 use anyhow::{Context, Result, anyhow};
 use tempfile::NamedTempFile;
 
-use crate::parse::{Card, CardMetadata};
+use crate::types::{Card, CardMetadata};
 
 #[derive(Clone)]
 pub enum OutputFormat {

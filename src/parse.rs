@@ -1,14 +1,16 @@
-use std::fmt::Debug;
+// TODO: rename to `storage`
 use std::fs::{self};
 use std::ops::RangeInclusive;
 use std::path::Path;
 
 use anyhow::{Result, anyhow};
-use chrono::{DateTime, FixedOffset};
+use chrono::DateTime;
 use log::warn;
 
 use markdown::mdast::{self, Node};
 use markdown::{ParseOptions, to_mdast};
+
+use crate::types::{Card, CardBody, CardMetadata, CardRef, SRSMeta};
 
 fn list_item_is_card(li: &mdast::ListItem) -> bool {
     // A ListItem "is a card" if its first child is a Paragraph whos child is a Text with
@@ -96,58 +98,6 @@ fn range_from_position(position: &markdown::unist::Position) -> RangeInclusive<u
     RangeInclusive::new(position.start.line - 1, position.end.line - 1)
 }
 
-#[derive(PartialEq, Clone)]
-pub struct Fingerprint(pub u64);
-
-impl std::fmt::Display for Fingerprint {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "0x{:016x}", self.0)
-    }
-}
-
-impl From<u64> for Fingerprint {
-    fn from(value: u64) -> Self {
-        Fingerprint(value)
-    }
-}
-
-// Some considerations
-// * I want to be able to hold all card metadata in memory, without holding all card data in memory
-// * I want to be able to load one card at a time and immediately store it back modified
-// * source_path is potentially used in lots of cards, avoid copying it
-pub struct CardRef<'a> {
-    pub source_path: &'a Path,
-    // prompt_fingerprint is XXH3 64 and will remain valid within the version of the crate,
-    // but not necessarily accross.
-    // The intended use is to list a set of cards, then immediately act on them one by one.
-    pub prompt_fingerprint: Fingerprint,
-}
-
-pub struct CardMetadata<'a> {
-    pub card_ref: CardRef<'a>,
-    pub prompt_prefix: String,
-    pub srs_meta: SRSMeta,
-}
-
-impl Debug for CardMetadata<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "CardMetadata {{")?;
-        writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
-        writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
-        writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
-        writeln!(f, "  srs_meta           : SRSMeta {{")?;
-        writeln!(f, "    repeats       : {}", self.srs_meta.repeats)?;
-        writeln!(f, "    next_schedule : {:?}", self.srs_meta.next_schedule)?;
-        writeln!(f, "    last_reviewed : {:?}", self.srs_meta.last_reviewed)?;
-        writeln!(f, "  }}")?;
-        write!(f, "}}")
-    }
-}
-
-fn fingerprint(s: &str) -> Fingerprint {
-    xxhash_rust::xxh3::xxh3_64(s.as_bytes()).into()
-}
-
 fn find_card_ranges(
     card: &mdast::ListItem,
 ) -> Result<(RangeInclusive<usize>, RangeInclusive<usize>)> {
@@ -202,42 +152,6 @@ fn is_metadata_line(l: &str) -> bool {
     l.trim_start().starts_with("card-")
 }
 
-// Spaced Repetition System (SRS) Metadata
-//
-// Logseq standard format:
-//   card-last-interval:: 39.06
-//   card-repeats:: 4
-//   card-ease-factor:: 1.0
-//   card-next-schedule:: 2025-07-15T00:00:00.000Z
-//   card-last-reviewed:: 2025-06-06T16:24:48.795Z
-//   card-last-score:: 1
-//
-// We don't use most of these,
-// but we preserve them anyway to enable simultaneous use with Logseq.
-// The order of properties is from `operation-score!` function in Logseq.
-#[derive(Debug)]
-pub struct SRSMeta {
-    pub last_interval: f64,
-    pub repeats: u8,
-    pub ease_factor: f64,
-    pub next_schedule: DateTime<FixedOffset>,
-    pub last_reviewed: DateTime<FixedOffset>,
-    pub last_score: u8,
-}
-
-impl Default for SRSMeta {
-    fn default() -> Self {
-        Self {
-            last_interval: -1.0,
-            repeats: 0,
-            ease_factor: 2.5,
-            next_schedule: DateTime::UNIX_EPOCH.fixed_offset(),
-            last_reviewed: DateTime::UNIX_EPOCH.fixed_offset(),
-            last_score: 5,
-        }
-    }
-}
-
 impl SRSMeta {
     fn from_prompt_lines(prompt_lines: &[&str]) -> Result<Self> {
         let mut srm = SRSMeta::default();
@@ -289,7 +203,7 @@ fn extract_card<'a>(
 
     Ok(Card {
         metadata: CardMetadata {
-            card_ref: CardRef { source_path: path, prompt_fingerprint: fingerprint(&prompt) },
+            card_ref: CardRef { source_path: path, prompt_fingerprint: prompt.as_str().into() },
             prompt_prefix,
             srs_meta: SRSMeta::from_prompt_lines(prompt_lines)?,
         },
@@ -310,18 +224,6 @@ pub fn extract_card_metadatas(path: &Path) -> Result<Vec<CardMetadata>> {
     let card_metadatas = cards.into_iter().map(|c| c.metadata).collect();
 
     Ok(card_metadatas)
-}
-
-pub struct CardBody {
-    // Both prompt and response are stored as read from file
-    pub prompt: String,
-    pub prompt_indent: usize,
-    pub response: String,
-}
-
-pub struct Card<'a> {
-    pub metadata: CardMetadata<'a>,
-    pub body: CardBody,
 }
 
 pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {

@@ -4,12 +4,14 @@ use anyhow::{Context, Result, anyhow};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::output::{OutputFormat, show_card};
-use crate::parse::{CardMetadata, Fingerprint, extract_card_by_ref, extract_card_metadatas};
+use crate::parse::{extract_card_by_ref, extract_card_metadatas};
+use crate::types::{CardMetadata, Fingerprint};
 
 pub mod output;
 pub mod parse;
 pub mod review;
 pub mod terminal;
+pub mod types;
 
 /// Work with Spaced Repetition Cards (SRS) embedded in Logseq pages
 #[derive(Parser)]
