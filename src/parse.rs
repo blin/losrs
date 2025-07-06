@@ -1,5 +1,7 @@
 // TODO: rename to `storage`
+use std::fs::File;
 use std::fs::{self};
+use std::io::Write;
 use std::ops::RangeInclusive;
 use std::path::Path;
 
@@ -13,6 +15,7 @@ use markdown::mdast::Node;
 use markdown::mdast::{self};
 use markdown::to_mdast;
 
+use crate::output::format_card_storage;
 use crate::types::Card;
 use crate::types::CardBody;
 use crate::types::CardMetadata;
@@ -161,7 +164,7 @@ fn is_metadata_line(l: &str) -> bool {
 
 impl SRSMeta {
     fn from_prompt_lines(prompt_lines: &[&str]) -> Result<Self> {
-        let mut srm = SRSMeta::default();
+        let mut srs_meta = SRSMeta::default();
 
         for line in prompt_lines {
             let Some((k, v)) = line.trim().split_once(":: ") else {
@@ -169,27 +172,27 @@ impl SRSMeta {
             };
             match k {
                 "card-last-interval" => {
-                    srm.last_interval = v.parse()?;
+                    srs_meta.last_interval = v.parse()?;
                 }
                 "card-repeats" => {
-                    srm.repeats = v.parse()?;
+                    srs_meta.repeats = v.parse()?;
                 }
                 "card-ease-factor" => {
-                    srm.ease_factor = v.parse()?;
+                    srs_meta.ease_factor = v.parse()?;
                 }
                 "card-next-schedule" => {
-                    srm.next_schedule = DateTime::parse_from_rfc3339(v)?;
+                    srs_meta.next_schedule = DateTime::parse_from_rfc3339(v)?;
                 }
                 "card-last-reviewed" => {
-                    srm.last_reviewed = DateTime::parse_from_rfc3339(v)?;
+                    srs_meta.last_reviewed = DateTime::parse_from_rfc3339(v)?;
                 }
                 "card-last-score" => {
-                    srm.last_score = v.parse()?;
+                    srs_meta.last_score = v.parse()?;
                 }
                 _ => {}
             };
         }
-        Ok(srm)
+        Ok(srs_meta)
     }
 }
 
@@ -246,6 +249,37 @@ pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
             return Ok(c);
         }
     }
+    Err(anyhow!(
+        "Card with fingerprint {} was not found in {}.",
+        card_ref.prompt_fingerprint,
+        card_ref.source_path.display(),
+    ))
+}
+
+pub fn rewrite_card_srs_meta(card_ref: &CardRef, srs_meta: SRSMeta) -> Result<()> {
+    let path = card_ref.source_path;
+    let file_raw = fs::read_to_string(path)?;
+    let file_raw_lines: Vec<&str> = file_raw.lines().collect();
+
+    let card_list_items = find_card_list_items(&file_raw)?;
+
+    for li in card_list_items.as_slice() {
+        let mut card = extract_card(li, path, &file_raw_lines)?;
+        card.metadata.srs_meta = srs_meta.clone();
+        if card.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
+            let (p_lines, l_lines) = find_card_ranges(li)?;
+
+            let mut f = File::create(path)?;
+            f.write_all(file_raw_lines[..p_lines.into_inner().0].to_vec().join("\n").as_bytes())?;
+            f.write_all("\n".as_bytes())?;
+            format_card_storage(&card, &mut f)?;
+            f.write_all(
+                file_raw_lines[l_lines.into_inner().1 + 1..].to_vec().join("\n").as_bytes(),
+            )?;
+            return Ok(());
+        }
+    }
+
     Err(anyhow!(
         "Card with fingerprint {} was not found in {}.",
         card_ref.prompt_fingerprint,

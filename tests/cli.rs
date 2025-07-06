@@ -1,10 +1,15 @@
+use std::fs;
 use std::path::Path;
 use std::process::Command;
 
+use anyhow::Result;
+use anyhow::anyhow;
 use serde::Serialize;
 
 use assert_fs::prelude::FileWriteStr;
 use insta_cmd::get_cargo_bin;
+use rexpect::process::wait::WaitStatus;
+use rexpect::session::spawn_command;
 
 #[derive(Serialize)]
 pub struct Info {
@@ -244,4 +249,112 @@ test_card_output!(
   - $$V = \frac{4}{3} \pi r^3$$
 - Not card
 "#
+);
+
+#[derive(Serialize)]
+pub struct ReviewInfo {
+    program: String,
+    args: Vec<String>,
+    page_lines: Vec<String>,
+    remembered: bool,
+}
+
+impl ReviewInfo {
+    fn new(cmd: &Command, page: &str, remembered: bool) -> Self {
+        ReviewInfo {
+            program: insta_cmd_describe_program(cmd.get_program()),
+            args: cmd.get_args().map(|x| x.to_string_lossy().into_owned()).collect(),
+            page_lines: page.split("\n").map(|s| s.to_owned()).collect(),
+            remembered,
+        }
+    }
+}
+
+macro_rules! test_card_review {
+    ($name:ident, $subcommand:expr, $args:expr, $page:expr, $remembered:expr ) => {
+        #[test]
+        fn $name() -> Result<()> {
+            let remembered: bool = $remembered;
+            // TODO: replace with tempfile::NamedTempFile to have one fewer dependency
+            let file = assert_fs::NamedTempFile::new("page.md").unwrap();
+            file.write_str($page).unwrap();
+
+            let mut cmd = Command::new(get_cargo_bin("logseq-srs"));
+            cmd.arg($subcommand).arg(file.path()).args($args);
+
+
+            let cmd_info = &ReviewInfo::new(&cmd, $page, remembered);
+            let mut p = spawn_command(cmd, Some(1000))?;
+
+            p.exp_string("Press any key to show the answer")?;
+            p.send(" ")?;
+            p.flush()?;
+
+            p.exp_string("Remembered?")?;
+            p.send(if remembered {"y"} else {"n"})?;
+            p.flush()?;
+
+            p.exp_string("Press any key to continue")?;
+            p.send(" ")?;
+            p.flush()?;
+
+            p.read_line()?; // for the process to exit
+
+            let status = p.process.status().ok_or(anyhow!("could not get process status"))?;
+            match status {
+                WaitStatus::Exited(_, _) => {}
+                _ => return Err(anyhow!("expected process to exit, got {:?}", status)),
+            }
+
+            let file_raw = fs::read_to_string(file)?;
+            insta::with_settings!({
+                omit_expression => true,
+                info => cmd_info,
+                filters => vec![
+                    (r"/tmp/.tmp\w+/", "[TMP_DIR]/"),
+                ],
+            },
+            {
+                insta::assert_snapshot!(file_raw);
+            });
+
+            Ok(())
+        }
+    };
+}
+
+test_card_review!(
+    card_has_meta_review_remembered_yes,
+    "review",
+    vec!["--at=2025-11-22T00:00:00Z"],
+    r#"- Not card
+- What is a sphere? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#,
+    true
+);
+
+test_card_review!(
+    card_has_meta_review_remembered_no,
+    "review",
+    vec!["--at=2025-11-22T00:00:00Z"],
+    r#"- Not card
+- What is a sphere? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#,
+    false
 );

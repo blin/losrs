@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
+use chrono::DateTime;
+use chrono::FixedOffset;
 use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
@@ -35,6 +37,10 @@ struct Cli {
 fn parse_hex(src: &str) -> Result<Fingerprint> {
     let s = src.trim_start_matches("0x");
     Ok(u64::from_str_radix(s, 16)?.into())
+}
+
+fn parse_datetime(src: &str) -> Result<DateTime<FixedOffset>> {
+    Ok(DateTime::parse_from_rfc3339(src)?)
 }
 
 #[derive(Args)]
@@ -92,6 +98,11 @@ enum Commands {
             value_enum
         )]
         format: OutputFormatArg,
+
+        /// RFC3999 timestamp to use as the time of the review.
+        /// Affects both selection and updating.
+        #[arg(long, value_parser = parse_datetime, value_name = "TIMESTAMP")]
+        at: Option<DateTime<FixedOffset>>,
     },
     /// prints metadata for cards
     Metadata {
@@ -138,9 +149,14 @@ fn main() -> Result<()> {
                 show_card(&card, &format)
             })?;
         }
-        Commands::Review { card_ref: CardRefArgs { path, prompt_fingerprint }, format } => {
+        Commands::Review { card_ref: CardRefArgs { path, prompt_fingerprint }, format, at } => {
+            let at = match at {
+                Some(at) => at,
+                None => chrono::offset::Utc::now().fixed_offset(),
+            };
+
             act_on_card_ref(&path, prompt_fingerprint, |cm| {
-                review::review_card(cm, (&format).into())
+                review::review_card(cm, (&format).into(), at)
             })?;
         }
         Commands::Metadata { card_ref: CardRefArgs { path, prompt_fingerprint } } => {
