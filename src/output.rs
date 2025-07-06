@@ -1,12 +1,16 @@
 use std::fmt::Display;
-use std::io::{Read, Write};
+use std::io::Read;
+use std::io::Write;
 use std::path::Path;
 use std::process;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::Context;
+use anyhow::Result;
+use anyhow::anyhow;
 use tempfile::NamedTempFile;
 
-use crate::types::{Card, CardMetadata};
+use crate::types::Card;
+use crate::types::CardMetadata;
 
 #[derive(Clone)]
 pub enum OutputFormat {

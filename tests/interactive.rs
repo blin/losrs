@@ -1,6 +1,7 @@
 use std::process::Command;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
+use anyhow::anyhow;
 use assert_fs::prelude::FileWriteStr;
 use insta_cmd::get_cargo_bin;
 use rexpect::process::wait::WaitStatus;

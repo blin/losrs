@@ -1,8 +1,13 @@
-use anyhow::{Context, Ok, Result};
+use anyhow::Context;
+use anyhow::Ok;
+use anyhow::Result;
 
-use crate::output::{OutputFormat, show_card};
+use crate::output::OutputFormat;
+use crate::output::show_card;
 use crate::parse::extract_card_by_ref;
-use crate::terminal::{clear_screen, wait_for_anykey, wait_for_review};
+use crate::terminal::clear_screen;
+use crate::terminal::wait_for_anykey;
+use crate::terminal::wait_for_review;
 use crate::types::CardMetadata;
 
 pub fn review_card(cm: &CardMetadata, format: OutputFormat) -> Result<()> {

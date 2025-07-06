@@ -1,7 +1,8 @@
 use std::fmt::Debug;
 use std::path::Path;
 
-use chrono::{DateTime, FixedOffset};
+use chrono::DateTime;
+use chrono::FixedOffset;
 
 #[derive(PartialEq, Clone)]
 pub struct Fingerprint(pub u64);

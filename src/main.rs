@@ -1,11 +1,20 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
-use anyhow::{Context, Result, anyhow};
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use anyhow::Context;
+use anyhow::Result;
+use anyhow::anyhow;
+use clap::Args;
+use clap::Parser;
+use clap::Subcommand;
+use clap::ValueEnum;
 
-use crate::output::{OutputFormat, show_card};
-use crate::parse::{extract_card_by_ref, extract_card_metadatas};
-use crate::types::{CardMetadata, Fingerprint};
+use crate::output::OutputFormat;
+use crate::output::show_card;
+use crate::parse::extract_card_by_ref;
+use crate::parse::extract_card_metadatas;
+use crate::types::CardMetadata;
+use crate::types::Fingerprint;
 
 pub mod output;
 pub mod parse;

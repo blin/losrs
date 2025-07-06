@@ -3,14 +3,21 @@ use std::fs::{self};
 use std::ops::RangeInclusive;
 use std::path::Path;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
+use anyhow::anyhow;
 use chrono::DateTime;
 use log::warn;
 
-use markdown::mdast::{self, Node};
-use markdown::{ParseOptions, to_mdast};
+use markdown::ParseOptions;
+use markdown::mdast::Node;
+use markdown::mdast::{self};
+use markdown::to_mdast;
 
-use crate::types::{Card, CardBody, CardMetadata, CardRef, SRSMeta};
+use crate::types::Card;
+use crate::types::CardBody;
+use crate::types::CardMetadata;
+use crate::types::CardRef;
+use crate::types::SRSMeta;
 
 fn list_item_is_card(li: &mdast::ListItem) -> bool {
     // A ListItem "is a card" if its first child is a Paragraph whos child is a Text with
@@ -250,7 +257,9 @@ pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::parse::{CardMetadata, CardRef, SRSMeta};
+    use crate::parse::CardMetadata;
+    use crate::parse::CardRef;
+    use crate::parse::SRSMeta;
 
     #[test]
     fn test_card_metadata_debug() {

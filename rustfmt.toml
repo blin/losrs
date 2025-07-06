@@ -1,5 +1,5 @@
 unstable_features = true
 style_edition = "2024"
 use_small_heuristics = "Max"
-imports_granularity = "Module"
+imports_granularity = "Item"
 normalize_comments = true

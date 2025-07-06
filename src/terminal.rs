@@ -1,10 +1,19 @@
-use std::io::{Write, stdout};
+use std::io::Write;
+use std::io::stdout;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
+use anyhow::anyhow;
 
 use crossterm::QueueableCommand;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
-use crossterm::terminal::{Clear, ClearType, disable_raw_mode, enable_raw_mode};
+use crossterm::event::Event;
+use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyModifiers;
+use crossterm::event::{self};
+use crossterm::terminal::Clear;
+use crossterm::terminal::ClearType;
+use crossterm::terminal::disable_raw_mode;
+use crossterm::terminal::enable_raw_mode;
 
 pub fn clear_screen() -> Result<()> {
     let mut stdout = stdout();
