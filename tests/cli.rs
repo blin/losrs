@@ -294,10 +294,6 @@ macro_rules! test_card_review {
             p.send(if remembered {"y"} else {"n"})?;
             p.flush()?;
 
-            p.exp_string("Press any key to continue")?;
-            p.send(" ")?;
-            p.flush()?;
-
             p.read_line()?; // for the process to exit
 
             let status = p.process.status().ok_or(anyhow!("could not get process status"))?;

@@ -20,16 +20,33 @@ pub enum OutputFormat {
     Storage,
 }
 
-pub fn show_card(card: &Card, format: &OutputFormat) -> Result<()> {
+pub enum CardBodyParts {
+    Prompt,
+    All,
+}
+
+fn show_card_inner(
+    card: &Card,
+    format: &OutputFormat,
+    card_body_parts: &CardBodyParts,
+) -> Result<()> {
     let mut result = Vec::new();
     match format {
-        OutputFormat::Clean => format_card_clean(card, &mut result)?,
-        OutputFormat::Typst => format_card_typst(card, &mut result)?,
-        OutputFormat::Sixel => format_card_sixel(card, &mut result)?,
-        OutputFormat::Storage => format_card_storage(card, &mut result)?,
+        OutputFormat::Clean => format_card_clean(card, &mut result, card_body_parts)?,
+        OutputFormat::Typst => format_card_typst(card, &mut result, card_body_parts)?,
+        OutputFormat::Sixel => format_card_sixel(card, &mut result, card_body_parts)?,
+        OutputFormat::Storage => format_card_storage(card, &mut result, card_body_parts)?,
     };
-    print!("{}", String::from_utf8_lossy(&result));
+    std::io::stdout().write_all(&result)?;
     Ok(())
+}
+
+pub fn show_card(card: &Card, format: &OutputFormat) -> Result<()> {
+    show_card_inner(card, format, &CardBodyParts::All)
+}
+
+pub fn show_card_prompt(card: &Card, format: &OutputFormat) -> Result<()> {
+    show_card_inner(card, format, &CardBodyParts::Prompt)
 }
 
 pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
@@ -37,22 +54,45 @@ pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
     Ok(())
 }
 
-pub fn format_card_clean(card: &Card, mut writer: impl std::io::Write) -> Result<()> {
-    writeln!(writer, "{}", card.body.prompt)?;
-    writeln!(writer, "{}", card.body.response)?;
+pub fn format_card_clean(
+    card: &Card,
+    mut writer: impl std::io::Write,
+    card_body_parts: &CardBodyParts,
+) -> Result<()> {
+    match card_body_parts {
+        CardBodyParts::Prompt => writeln!(writer, "{}", card.body.prompt)?,
+        CardBodyParts::All => {
+            writeln!(writer, "{}", card.body.prompt)?;
+            writeln!(writer, "{}", card.body.response)?;
+        }
+    }
     Ok(())
 }
 
-pub fn format_card_typst(card: &Card, mut writer: impl std::io::Write) -> Result<()> {
-    let markdown = format!("{}\n{}", card.body.prompt, card.body.response);
+pub fn format_card_typst(
+    card: &Card,
+    mut writer: impl std::io::Write,
+    card_body_parts: &CardBodyParts,
+) -> Result<()> {
+    let markdown = match card_body_parts {
+        CardBodyParts::Prompt => card.body.prompt.clone(),
+        CardBodyParts::All => format!("{}\n{}", card.body.prompt, card.body.response),
+    };
     let typst = markdown_to_typst(markdown)
         .with_context(|| "failed to convert markdown to typst using pandoc".to_owned())?;
     write!(writer, "{}", typst)?;
     Ok(())
 }
 
-pub fn format_card_sixel(card: &Card, mut writer: impl std::io::Write) -> Result<()> {
-    let markdown = format!("{}\n{}", card.body.prompt, card.body.response);
+pub fn format_card_sixel(
+    card: &Card,
+    mut writer: impl std::io::Write,
+    card_body_parts: &CardBodyParts,
+) -> Result<()> {
+    let markdown = match card_body_parts {
+        CardBodyParts::Prompt => card.body.prompt.clone(),
+        CardBodyParts::All => format!("{}\n{}", card.body.prompt, card.body.response),
+    };
 
     let typst = markdown_to_typst(markdown)
         .with_context(|| "failed to convert markdown to typst using pandoc".to_owned())?;
@@ -193,7 +233,15 @@ fn png_to_sixel(png_buf: Vec<u8>) -> Result<Vec<u8>> {
     Ok(output.stdout)
 }
 
-pub fn format_card_storage(card: &Card, mut writer: impl std::io::Write) -> Result<()> {
+pub fn format_card_storage(
+    card: &Card,
+    mut writer: impl std::io::Write,
+    card_body_parts: &CardBodyParts,
+) -> Result<()> {
+    // format_card_storage does not accept a CardBodyPart, as the card is always stored with all parts
+    if let CardBodyParts::Prompt = card_body_parts {
+        return Err(anyhow!("can not output just the prompt in storage format"));
+    }
     writeln!(writer, "{}", card.body.prompt)?;
 
     let srs_meta = &card.metadata.srs_meta;

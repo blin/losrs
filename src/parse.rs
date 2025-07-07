@@ -15,6 +15,7 @@ use markdown::mdast::Node;
 use markdown::mdast::{self};
 use markdown::to_mdast;
 
+use crate::output::CardBodyParts;
 use crate::output::format_card_storage;
 use crate::types::Card;
 use crate::types::CardBody;
@@ -272,7 +273,7 @@ pub fn rewrite_card_srs_meta(card_ref: &CardRef, srs_meta: SRSMeta) -> Result<()
             let mut f = File::create(path)?;
             f.write_all(file_raw_lines[..p_lines.into_inner().0].to_vec().join("\n").as_bytes())?;
             f.write_all("\n".as_bytes())?;
-            format_card_storage(&card, &mut f)?;
+            format_card_storage(&card, &mut f, &CardBodyParts::All)?;
             f.write_all(
                 file_raw_lines[l_lines.into_inner().1 + 1..].to_vec().join("\n").as_bytes(),
             )?;

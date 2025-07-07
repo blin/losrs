@@ -7,6 +7,7 @@ use chrono::FixedOffset;
 
 use crate::output::OutputFormat;
 use crate::output::show_card;
+use crate::output::show_card_prompt;
 use crate::parse::extract_card_by_ref;
 use crate::parse::rewrite_card_srs_meta;
 use crate::terminal::ReviewResponse;
@@ -60,11 +61,23 @@ pub fn review_card(
         cm.card_ref.prompt_fingerprint,
         cm.card_ref.source_path.display()
     );
+
     // TODO: make show_card returns bytes,
-    // so that we can print everything together, without delay
-    show_card(&card, &format)?;
+    // so that we can print everything together, without delay.
+    // 1. Show progressbar
+    // 2. Format card into buffer
+    // 3. Complete progressbar
+    // 4. Show the whole thing
+    show_card_prompt(&card, &format)?;
 
     wait_for_anykey("show the answer")?;
+
+    clear_screen()?;
+    println!(
+        "Reviewing {} from {}",
+        cm.card_ref.prompt_fingerprint,
+        cm.card_ref.source_path.display()
+    );
 
     show_card(&card, &format)?;
 
@@ -73,8 +86,6 @@ pub fn review_card(
         compute_next_srs_meta(&card.metadata.srs_meta, &review_response, reviewed_at);
 
     rewrite_card_srs_meta(&card.metadata.card_ref, next_srs_meta)?;
-
-    wait_for_anykey("continue")?;
 
     Ok(())
 }
