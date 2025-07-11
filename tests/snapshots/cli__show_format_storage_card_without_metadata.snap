@@ -4,14 +4,14 @@ info:
   program: logseq-srs
   args:
     - show
-    - /tmp/.tmpvczQ7T/page.md
+    - /tmp/.tmp1ZVCax
     - "--format=storage"
   page_lines:
-    - "- Not card"
-    - "- What is the antiderivative of $f(x) = x^r$ (symbolic)? #card"
-    - "  - $$\\int{x^r dx} = \\frac{x^{(r+1)}}{r+1} + C$$"
-    - "- Not card"
-    - ""
+    - - "- Not card"
+      - "- What is the antiderivative of $f(x) = x^r$ (symbolic)? #card"
+      - "  - $$\\int{x^r dx} = \\frac{x^{(r+1)}}{r+1} + C$$"
+      - "- Not card"
+      - ""
 ---
 success: true
 exit_code: 0

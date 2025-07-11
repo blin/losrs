@@ -4,7 +4,7 @@ info:
   program: logseq-srs
   args:
     - review
-    - /tmp/.tmpOGwxOP/page.md
+    - /tmp/.tmpvtE06X/page.md
     - "--at=2024-01-01T00:00:00Z"
   page_lines:
     - "- Not card"
@@ -18,7 +18,7 @@ info:
     - "  - Set of points in a 3 dimensional space that are equidistant from a center point."
     - "- Not card"
     - ""
-  misc:
+  interaction_meta:
     expected type of interaction: no review
 ---
 - Not card

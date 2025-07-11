@@ -4,7 +4,7 @@ info:
   program: logseq-srs
   args:
     - review
-    - /tmp/.tmp3KKvOg/page.md
+    - /tmp/.tmpiG0yMd/page.md
     - "--at=2025-11-22T00:00:00Z"
   page_lines:
     - "- Not card"
@@ -18,7 +18,9 @@ info:
     - "  - Set of points in a 3 dimensional space that are equidistant from a center point."
     - "- Not card"
     - ""
-  remembered: true
+  interaction_meta:
+    remembered: "true"
+    expected type of interaction: review
 ---
 - Not card
 - What is a sphere? #card

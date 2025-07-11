@@ -1,0 +1,28 @@
+---
+source: tests/cli.rs
+info:
+  program: logseq-srs
+  args:
+    - show
+    - /tmp/.tmpxOmanc
+    - "--format=typst"
+  page_lines:
+    - - "- Not card"
+      - "- What is the antiderivative of $f(x) = x^r$ (symbolic)? #card"
+      - "  card-last-interval:: 244.14"
+      - "  card-repeats:: 6"
+      - "  card-ease-factor:: 3.1"
+      - "  card-next-schedule:: 2025-12-28T00:00:00.000Z"
+      - "  card-last-reviewed:: 2025-04-28T09:12:30.985Z"
+      - "  card-last-score:: 5"
+      - "  - $$\\int{x^r dx} = \\frac{x^{(r+1)}}{r+1} + C$$"
+      - "- Not card"
+      - ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+- What is the antiderivative of $f \( x \) = x^r$ (symbolic)? \#card
+  - $ integral x^r d x = frac(x^(\( r + 1 \)), r + 1) + C $
+
+----- stderr -----

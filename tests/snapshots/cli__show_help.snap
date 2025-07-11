@@ -1,0 +1,29 @@
+---
+source: tests/cli.rs
+info:
+  program: logseq-srs
+  args:
+    - show
+    - /tmp/.tmpLCDrYm
+    - "--help"
+  page_lines:
+    - - ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+print cards
+
+Usage: logseq-srs show [OPTIONS] <PATH> [PROMPT_FINGERPRINT]
+
+Arguments:
+  <PATH>                The path to the file to read
+  [PROMPT_FINGERPRINT]  Fingerprint of the card's prompt. Use metadata command to find one
+
+Options:
+      --format <FORMAT>  [default: clean] [possible values: clean, typst, sixel, storage]
+  -v, --verbose...       Increase logging verbosity
+  -q, --quiet...         Decrease logging verbosity
+  -h, --help             Print help
+
+----- stderr -----

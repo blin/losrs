@@ -1,0 +1,28 @@
+---
+source: tests/cli.rs
+info:
+  program: logseq-srs
+  args:
+    - metadata
+    - /tmp/.tmp1eZeFU
+    - "--help"
+  page_lines:
+    - - ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+prints metadata for cards
+
+Usage: logseq-srs metadata [OPTIONS] <PATH> [PROMPT_FINGERPRINT]
+
+Arguments:
+  <PATH>                The path to the file to read
+  [PROMPT_FINGERPRINT]  Fingerprint of the card's prompt. Use metadata command to find one
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -q, --quiet...    Decrease logging verbosity
+  -h, --help        Print help
+
+----- stderr -----

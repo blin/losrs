@@ -69,8 +69,6 @@ macro_rules! test_card_output {
                 fs::write(pages_dir.join(format!("{}.md", idx)), page)
                     .expect("expect temp page writes to succeed")
             });
-            let entries: Vec<_> = fs::read_dir(pages_dir).expect("read dir").collect();
-            println!("dir entries: {:?}", entries);
 
             let mut cmd = Command::new(get_cargo_bin("logseq-srs"));
             cmd.arg(subcommand).arg(graph_root.path()).args(args);
@@ -91,8 +89,10 @@ macro_rules! test_card_output {
     };
 }
 
+test_card_output!(show_help, "show", vec!["--help"], vec![""]);
+
 test_card_output!(
-    single_top_level_card,
+    show,
     "show",
     Vec::<&str>::new(),
     vec![
@@ -111,7 +111,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    single_top_level_card_clean,
+    show_format_clean,
     "show",
     vec!["--format=clean"],
     vec![
@@ -130,7 +130,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    single_top_level_card_typst,
+    show_format_typst,
     "show",
     vec!["--format=typst"],
     vec![
@@ -149,7 +149,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    single_top_level_card_storage,
+    show_format_storage,
     "show",
     vec!["--format=storage"],
     vec![
@@ -168,7 +168,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    show_card_without_metadata_in_storage_format,
+    show_format_storage_card_without_metadata,
     "show",
     vec!["--format=storage"],
     vec![
@@ -181,7 +181,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    show_card_with_reordered_metadata_in_storage_format,
+    show_format_storage_card_with_reordered_metadata,
     "show",
     vec!["--format=storage"],
     vec![
@@ -200,7 +200,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    card_with_data_after_metadata,
+    show_card_with_data_after_metadata,
     "show",
     Vec::<&str>::new(),
     vec![
@@ -221,7 +221,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    card_with_unicode_prompt,
+    show_card_with_unicode_prompt,
     "show",
     Vec::<&str>::new(),
     vec![
@@ -241,8 +241,10 @@ test_card_output!(
     ]
 );
 
+test_card_output!(metadata_help, "metadata", vec!["--help"], vec![""]);
+
 test_card_output!(
-    single_top_level_card_metadata,
+    metadata,
     "metadata",
     Vec::<&str>::new(),
     vec![
@@ -261,7 +263,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    one_of_top_level_cards,
+    show_with_fingerprint,
     "show",
     vec!["0xb9de554a02212aca"],
     vec![
@@ -288,7 +290,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    multiple_top_level_cards,
+    show_multiple_page_files,
     "show",
     Vec::<&str>::new(),
     vec![
@@ -318,7 +320,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    show_third_level_card,
+    show_card_is_deeply_nested,
     "show",
     Vec::<&str>::new(),
     vec![
@@ -339,7 +341,7 @@ test_card_output!(
 );
 
 test_card_output!(
-    show_third_level_card_in_storage_format,
+    show_format_storage_card_is_deeply_nested,
     "show",
     vec!["--format=storage"],
     vec![
@@ -450,7 +452,7 @@ macro_rules! test_card_review {
 }
 
 test_card_review!(
-    card_has_meta_review_remembered_yes,
+    review_remembered_yes,
     "review",
     vec!["--at=2025-11-22T00:00:00Z"],
     r#"- Not card
@@ -472,7 +474,7 @@ test_card_review!(
 );
 
 test_card_review!(
-    card_has_meta_review_remembered_no,
+    review_remembered_no,
     "review",
     vec!["--at=2025-11-22T00:00:00Z"],
     r#"- Not card
@@ -492,6 +494,8 @@ test_card_review!(
         ("remembered".to_string(), "false".to_string())
     ])
 );
+
+test_card_output!(review_help, "review", vec!["--help"], vec![""]);
 
 test_card_review!(
     review_card_not_ready,

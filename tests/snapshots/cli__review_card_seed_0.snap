@@ -4,7 +4,7 @@ info:
   program: logseq-srs
   args:
     - review
-    - /tmp/.tmpZ8lw65/page.md
+    - /tmp/.tmpPIY2Ec/page.md
     - "--at=2025-09-01T00:00:00Z"
     - "--seed=0"
   page_lines:

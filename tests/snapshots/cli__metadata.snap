@@ -1,0 +1,35 @@
+---
+source: tests/cli.rs
+info:
+  program: logseq-srs
+  args:
+    - metadata
+    - /tmp/.tmpxolQP7
+  page_lines:
+    - - "- Not card"
+      - "- What is a sphere? #card"
+      - "  card-last-interval:: 244.14"
+      - "  card-repeats:: 6"
+      - "  card-ease-factor:: 3.1"
+      - "  card-next-schedule:: 2025-11-21T00:00:00.000Z"
+      - "  card-last-reviewed:: 2025-03-22T09:54:57.202Z"
+      - "  card-last-score:: 5"
+      - "  - Set of points in a 3 dimensional space that are equidistant from a center point."
+      - "- Not card"
+      - ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+CardMetadata {
+  source_path        : [TMP_DIR]/pages/0.md
+  prompt_fingerprint : 0xb9de554a02212aca
+  prompt_prefix      : What is a sphere? #card
+  srs_meta           : SRSMeta {
+    repeats       : 6
+    next_schedule : 2025-11-21T00:00:00+00:00
+    last_reviewed : 2025-03-22T09:54:57.202+00:00
+  }
+}
+
+----- stderr -----

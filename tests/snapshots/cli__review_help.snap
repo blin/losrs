@@ -1,0 +1,31 @@
+---
+source: tests/cli.rs
+info:
+  program: logseq-srs
+  args:
+    - review
+    - /tmp/.tmpn3PhEY
+    - "--help"
+  page_lines:
+    - - ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+review cards
+
+Usage: logseq-srs review [OPTIONS] <PATH> [PROMPT_FINGERPRINT]
+
+Arguments:
+  <PATH>                The path to the file to read
+  [PROMPT_FINGERPRINT]  Fingerprint of the card's prompt. Use metadata command to find one
+
+Options:
+      --format <FORMAT>  [default: clean] [possible values: clean, typst, sixel, storage]
+  -v, --verbose...       Increase logging verbosity
+      --at <TIMESTAMP>   RFC3999 timestamp to use as the time of the review. Affects both selection and updating
+  -q, --quiet...         Decrease logging verbosity
+      --seed <SEED>      Seed used for shuffling cards ready to be reviewed
+  -h, --help             Print help
+
+----- stderr -----

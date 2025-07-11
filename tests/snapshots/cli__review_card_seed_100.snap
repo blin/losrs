@@ -4,7 +4,7 @@ info:
   program: logseq-srs
   args:
     - review
-    - /tmp/.tmpxil2KQ/page.md
+    - /tmp/.tmpc8YKiG/page.md
     - "--at=2025-09-01T00:00:00Z"
     - "--seed=100"
   page_lines:
@@ -29,8 +29,8 @@ info:
     - "- Not card"
     - ""
   interaction_meta:
-    first card with given seed: "What is Gregg Simplified for \"N\" (description)?"
     expected type of interaction: "review first card, then nope out"
+    first card with given seed: "What is Gregg Simplified for \"N\" (description)?"
 ---
 - Not card
 - Alphabet forward cards

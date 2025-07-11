@@ -4,7 +4,7 @@ info:
   program: logseq-srs
   args:
     - show
-    - /tmp/.tmpJuXxdO
+    - /tmp/.tmp8HUNil
     - "--format=storage"
   page_lines:
     - - "- Not card"
