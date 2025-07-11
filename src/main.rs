@@ -113,21 +113,24 @@ enum Commands {
 
 fn act_on_card_ref<F>(path: &Path, prompt_fingerprint: Option<Fingerprint>, f: F) -> Result<()>
 where
-    F: Fn(&CardMetadata) -> Result<()>,
+    F: Fn(&mut Vec<CardMetadata>) -> Result<()>,
 {
-    let page_files = find_page_files(path)?;
-    for page_file in page_files {
-        let mut card_metadatas = extract_card_metadatas(&page_file).with_context(|| {
+    // The complexity in act_on_card_ref is introduced so that PathBufs from page_files
+    // outlive CardMetadatas from all_card_metadatas, which refer to these PathBufs.
+    // There is probably a better way to do this.
+    let page_files: Vec<PathBuf> = find_page_files(path)?;
+    let mut all_card_metadatas: Vec<CardMetadata> = Vec::new();
+    for page_file in page_files.iter() {
+        let mut card_metadatas = extract_card_metadatas(page_file).with_context(|| {
             format!("when extracting card metadatas from {}", page_file.display())
         })?;
 
         if let Some(prompt_fingerprint) = prompt_fingerprint.clone() {
             card_metadatas.retain(|cm| cm.card_ref.prompt_fingerprint == prompt_fingerprint);
         }
-        for cm in card_metadatas {
-            f(&cm)?;
-        }
+        all_card_metadatas.extend(card_metadatas);
     }
+    f(&mut all_card_metadatas)?;
     Ok(())
 }
 
@@ -137,9 +140,10 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Show { card_ref: CardRefArgs { path, prompt_fingerprint }, format } => {
-            act_on_card_ref(&path, prompt_fingerprint, |cm| {
-                let format = (&format).into();
-                let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
+            act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
+                for cm in card_metas {
+                    let format = (&format).into();
+                    let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
                     format!(
                         "When extracting card with fingerprint {} from {}, card with prompt prefix: {}",
                         cm.card_ref.prompt_fingerprint,
@@ -147,7 +151,9 @@ fn main() -> Result<()> {
                         cm.prompt_prefix
                     )
                 })?;
-                show_card(&card, &format)
+                    show_card(&card, &format)?
+                }
+                Ok(())
             })?;
         }
         Commands::Review { card_ref: CardRefArgs { path, prompt_fingerprint }, format, at } => {
@@ -156,13 +162,22 @@ fn main() -> Result<()> {
                 None => chrono::offset::Utc::now().fixed_offset(),
             };
 
-            act_on_card_ref(&path, prompt_fingerprint, |cm| {
-                review::review_card(cm, (&format).into(), at)
+            act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
+                card_metas.retain(|cm| cm.srs_meta.next_schedule <= at);
+                for cm in card_metas {
+                    review::review_card(cm, (&format).into(), at)?
+                }
+                Ok(())
             })?;
             println!("Reviewed all cards, huzzah!");
         }
         Commands::Metadata { card_ref: CardRefArgs { path, prompt_fingerprint } } => {
-            act_on_card_ref(&path, prompt_fingerprint, output::show_metadata)?;
+            act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
+                for cm in card_metas {
+                    output::show_metadata(cm)?;
+                }
+                Ok(())
+            })?;
         }
     }
 

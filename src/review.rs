@@ -46,9 +46,6 @@ pub fn review_card(
     format: OutputFormat,
     reviewed_at: DateTime<FixedOffset>,
 ) -> Result<()> {
-    if cm.srs_meta.next_schedule > reviewed_at {
-        return Ok(());
-    }
     let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
         format!(
             "When extracting card with fingerprint {} from {}, card with prompt prefix: {}",
