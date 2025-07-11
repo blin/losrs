@@ -158,10 +158,6 @@ fn destructure_card<'a>(
     Ok((p_lines, l_lines))
 }
 
-fn strip_prompt_metadata(prompt: &str) -> String {
-    prompt.split("\n").filter(|l| !is_metadata_line(l)).collect::<Vec<_>>().join("\n")
-}
-
 fn is_metadata_line(l: &str) -> bool {
     l.trim_start().starts_with("card-")
 }
@@ -204,6 +200,19 @@ impl SRSMeta {
     }
 }
 
+fn strip_prompt_metadata<'a>(
+    prompt_lines: impl Iterator<Item = &'a str>,
+) -> impl Iterator<Item = &'a str> {
+    prompt_lines.filter(|l| !is_metadata_line(l))
+}
+
+fn strip_indent<'a>(
+    lines: impl Iterator<Item = &'a str>,
+    indent: &str,
+) -> impl Iterator<Item = &'a str> {
+    lines.map(move |line| line.strip_prefix(indent).unwrap_or(line))
+}
+
 fn extract_card<'a>(
     card_list_item: &mdast::ListItem,
     path: &'a Path,
@@ -212,12 +221,17 @@ fn extract_card<'a>(
     let (prompt_lines, response_lines) = destructure_card(card_list_item, file_raw_lines)?;
 
     let prompt_line_first = prompt_lines.first().unwrap_or(&"").to_owned().trim_end();
-    let prompt_indent = prompt_line_first.chars().take_while(|c| c.is_whitespace()).count();
+    let prompt_indent_size = prompt_line_first.chars().take_while(|c| *c == ' ').count();
+    let prompt_indent = " ".repeat(prompt_indent_size);
     // prompt_indent+2 to strip `- `
-    let prompt_prefix = prompt_line_first.chars().skip(prompt_indent + 2).take(64).collect();
+    let prompt_prefix = prompt_line_first.chars().skip(prompt_indent_size + 2).take(64).collect();
 
-    let prompt = strip_prompt_metadata(&prompt_lines.join("\n"));
-    let response = response_lines.join("\n");
+    let prompt = strip_indent(strip_prompt_metadata(prompt_lines.iter().copied()), &prompt_indent)
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let response =
+        strip_indent(response_lines.iter().copied(), &prompt_indent).collect::<Vec<_>>().join("\n");
 
     Ok(Card {
         metadata: CardMetadata {
@@ -226,7 +240,7 @@ fn extract_card<'a>(
             srs_meta: SRSMeta::from_prompt_lines(prompt_lines)
                 .with_context(|| "when extracting SRS meta")?,
         },
-        body: CardBody { prompt, prompt_indent, response },
+        body: CardBody { prompt, prompt_indent: prompt_indent_size, response },
     })
 }
 

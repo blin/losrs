@@ -242,7 +242,8 @@ pub fn format_card_storage(
     if let CardBodyParts::Prompt = card_body_parts {
         return Err(anyhow!("can not output just the prompt in storage format"));
     }
-    writeln!(writer, "{}", card.body.prompt)?;
+    let prompt_indent = " ".repeat(card.body.prompt_indent);
+    let _ = card.body.prompt.lines().try_for_each(|l| writeln!(writer, "{prompt_indent}{l}"));
 
     let srs_meta = &card.metadata.srs_meta;
     let off_indent = " ".repeat(card.body.prompt_indent + 2);
@@ -261,7 +262,7 @@ pub fn format_card_storage(
     )?;
     writeln!(writer, "{off_indent}card-last-score:: {}", srs_meta.last_score)?;
 
-    writeln!(writer, "{}", card.body.response)?;
+    let _ = card.body.response.lines().try_for_each(|l| writeln!(writer, "{prompt_indent}{l}"));
 
     Ok(())
 }
