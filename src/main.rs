@@ -159,6 +159,7 @@ fn main() -> Result<()> {
             act_on_card_ref(&path, prompt_fingerprint, |cm| {
                 review::review_card(cm, (&format).into(), at)
             })?;
+            println!("Reviewed all cards, huzzah!");
         }
         Commands::Metadata { card_ref: CardRefArgs { path, prompt_fingerprint } } => {
             act_on_card_ref(&path, prompt_fingerprint, output::show_metadata)?;

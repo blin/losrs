@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -9,6 +10,7 @@ use serde::Serialize;
 use assert_fs::prelude::FileWriteStr;
 use insta_cmd::get_cargo_bin;
 use rexpect::process::wait::WaitStatus;
+use rexpect::session::PtySession;
 use rexpect::session::spawn_command;
 
 #[derive(Serialize)]
@@ -362,25 +364,46 @@ pub struct ReviewInfo {
     program: String,
     args: Vec<String>,
     page_lines: Vec<String>,
-    remembered: bool,
+    interaction_meta: HashMap<String, String>,
 }
 
 impl ReviewInfo {
-    fn new(cmd: &Command, page: &str, remembered: bool) -> Self {
+    fn new(cmd: &Command, page: &str, interaction_meta: HashMap<String, String>) -> Self {
         ReviewInfo {
             program: insta_cmd_describe_program(cmd.get_program()),
             args: cmd.get_args().map(|x| x.to_string_lossy().into_owned()).collect(),
             page_lines: page.split("\n").map(|s| s.to_owned()).collect(),
-            remembered,
+            interaction_meta,
         }
     }
 }
 
+fn expect_review_interaction(p: &mut PtySession, remembered: bool) -> Result<()> {
+    p.exp_string("Press any key to show the answer")?;
+    p.send(" ")?;
+    p.flush()?;
+
+    p.exp_string("Remembered?")?;
+    p.send(if remembered { "y" } else { "n" })?;
+    p.flush()?;
+
+    p.read_line()?; // for the process to exit
+
+    Ok(())
+}
+
+fn expect_no_review_interaction(p: &mut PtySession) -> Result<()> {
+    p.exp_string("Reviewed all cards, huzzah!")?;
+
+    Ok(())
+}
+
 macro_rules! test_card_review {
-    ($name:ident, $subcommand:expr, $args:expr, $page:expr, $remembered:expr ) => {
+    ($name:ident, $subcommand:expr, $args:expr, $page:expr, $f:expr, $interaction_meta:expr ) => {
         #[test]
         fn $name() -> Result<()> {
-            let remembered: bool = $remembered;
+            let f:fn(&mut PtySession) -> Result<()> = $f;
+            let interaction_meta: HashMap<String, String> = $interaction_meta;
             // TODO: replace with tempfile::NamedTempFile to have one fewer dependency
             let file = assert_fs::NamedTempFile::new("page.md").unwrap();
             file.write_str($page).unwrap();
@@ -389,18 +412,11 @@ macro_rules! test_card_review {
             cmd.arg($subcommand).arg(file.path()).args($args);
 
 
-            let cmd_info = &ReviewInfo::new(&cmd, $page, remembered);
+            let cmd_info = &ReviewInfo::new(&cmd, $page, interaction_meta);
             let mut p = spawn_command(cmd, Some(1000))?;
 
-            p.exp_string("Press any key to show the answer")?;
-            p.send(" ")?;
-            p.flush()?;
+            f(&mut p)?;
 
-            p.exp_string("Remembered?")?;
-            p.send(if remembered {"y"} else {"n"})?;
-            p.flush()?;
-
-            p.read_line()?; // for the process to exit
 
             let status = p.process.status().ok_or(anyhow!("could not get process status"))?;
             match status {
@@ -440,7 +456,11 @@ test_card_review!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    true
+    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
+    HashMap::from([
+        ("expected type of interaction".to_string(), "review".to_string()),
+        ("remembered".to_string(), "true".to_string())
+    ])
 );
 
 test_card_review!(
@@ -458,5 +478,28 @@ test_card_review!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    false
+    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
+    HashMap::from([
+        ("expected type of interaction".to_string(), "review".to_string()),
+        ("remembered".to_string(), "false".to_string())
+    ])
+);
+
+test_card_review!(
+    review_card_not_ready,
+    "review",
+    vec!["--at=2024-01-01T00:00:00Z"],
+    r#"- Not card
+- What is a sphere? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#,
+    |p: &mut PtySession| -> Result<()> { expect_no_review_interaction(p) },
+    HashMap::from([("expected type of interaction".to_string(), "no review".to_string()),])
 );
