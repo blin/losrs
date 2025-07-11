@@ -315,6 +315,48 @@ test_card_output!(
     ]
 );
 
+test_card_output!(
+    show_third_level_card,
+    "show",
+    Vec::<&str>::new(),
+    vec![
+        r#"- Not card
+- induction
+  - Automatically generated induction principles for Inductive Types (in general)
+    - What kind of function is a generated induction principle function (similarity, not implimentation)? #card
+      card-last-score:: 5
+      card-repeats:: 6
+      card-next-schedule:: 2026-01-25T00:00:00.000Z
+      card-last-interval:: 244.14
+      card-ease-factor:: 3.5
+      card-last-reviewed:: 2025-05-26T09:11:31.735Z
+      - Fixpoint
+- Not card
+"#,
+    ]
+);
+
+test_card_output!(
+    show_third_level_card_in_storage_format,
+    "show",
+    vec!["--format=storage"],
+    vec![
+        r#"- Not card
+- induction
+  - Automatically generated induction principles for Inductive Types (in general)
+    - What kind of function is a generated induction principle function (similarity, not implimentation)? #card
+      card-last-score:: 5
+      card-repeats:: 6
+      card-next-schedule:: 2026-01-25T00:00:00.000Z
+      card-last-interval:: 244.14
+      card-ease-factor:: 3.5
+      card-last-reviewed:: 2025-05-26T09:11:31.735Z
+      - Fixpoint
+- Not card
+"#,
+    ]
+);
+
 #[derive(Serialize)]
 pub struct ReviewInfo {
     program: String,
