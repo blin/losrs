@@ -173,7 +173,15 @@ fn markdown_to_typst(markdown: String) -> Result<Typst> {
     Ok(Typst(stdout))
 }
 
-const TYPST_FRONTMATTER: &str = "#set page(width: 13cm, height: auto, margin: 10pt)\n";
+const TYPST_FRONTMATTER: &str = r##"#set page(width: 13cm, height: auto, margin: 10pt)
+#show quote: it => {
+  rect(
+    inset: (left: 12pt, rest: 8pt),
+    stroke: (left: 3pt + gray, rest: none),
+    it.body
+  )
+}
+"##;
 
 fn typst_to_png(typst: Typst, graph_root: &Path) -> Result<Vec<u8>> {
     // typst_file needs to be in graph_root to support root relative references to assets,
