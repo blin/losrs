@@ -15,15 +15,18 @@ use rexpect::session::spawn_command;
 pub struct Info {
     program: String,
     args: Vec<String>,
-    page_lines: Vec<String>,
+    page_lines: Vec<Vec<String>>,
 }
 
 impl Info {
-    fn new(cmd: &Command, page: &str) -> Self {
+    fn new(cmd: &Command, pages: Vec<&str>) -> Self {
         Info {
             program: insta_cmd_describe_program(cmd.get_program()),
             args: cmd.get_args().map(|x| x.to_string_lossy().into_owned()).collect(),
-            page_lines: page.split("\n").map(|s| s.to_owned()).collect(),
+            page_lines: pages
+                .iter()
+                .map(|p| p.split("\n").map(|s| s.to_owned()).collect())
+                .collect(),
         }
     }
 }
@@ -50,20 +53,30 @@ fn insta_cmd_describe_program(cmd: &std::ffi::OsStr) -> String {
 }
 
 macro_rules! test_card_output {
-    ($name:ident, $subcommand:expr, $args:expr, $page:expr ) => {
+    ($name:ident, $subcommand:expr, $args:expr, $pages:expr ) => {
         #[test]
-        fn $name() {
-            // TODO: replace with tempfile::NamedTempFile to have one fewer dependency
-            let file = assert_fs::NamedTempFile::new("page.md").unwrap();
-            file.write_str($page).unwrap();
+        fn $name() -> Result<()> {
+            let pages = $pages;
+            let subcommand = $subcommand;
+            let args = $args;
+            let graph_root = tempfile::TempDir::new()?;
+            let pages_dir = graph_root.path().join("pages");
+            std::fs::create_dir(pages_dir.as_path())?;
+
+            pages.iter().enumerate().for_each(|(idx, page)| {
+                fs::write(pages_dir.join(format!("{}.md", idx)), page)
+                    .expect("expect temp page writes to succeed")
+            });
+            let entries: Vec<_> = fs::read_dir(pages_dir).expect("read dir").collect();
+            println!("dir entries: {:?}", entries);
 
             let mut cmd = Command::new(get_cargo_bin("logseq-srs"));
-            cmd.arg($subcommand).arg(file.path()).args($args);
+            cmd.arg(subcommand).arg(graph_root.path()).args(args);
             let output = cmd.output().unwrap();
 
             insta::with_settings!({
                 omit_expression => true,
-                info => &Info::new(&cmd, $page),
+                info => &Info::new(&cmd, pages),
                 filters => vec![
                     (r"/tmp/.tmp\w+/", "[TMP_DIR]/"),
                 ],
@@ -71,6 +84,7 @@ macro_rules! test_card_output {
             {
                 insta::assert_snapshot!(insta_cmd_format_output(output));
             });
+            Ok(())
         }
     };
 }
@@ -78,8 +92,9 @@ macro_rules! test_card_output {
 test_card_output!(
     single_top_level_card,
     "show",
-    Vec::<String>::new(),
-    r#"- Not card
+    Vec::<&str>::new(),
+    vec![
+        r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -90,13 +105,15 @@ test_card_output!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#
+    ]
 );
 
 test_card_output!(
     single_top_level_card_clean,
     "show",
     vec!["--format=clean"],
-    r#"- Not card
+    vec![
+        r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -107,13 +124,15 @@ test_card_output!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#
+    ]
 );
 
 test_card_output!(
     single_top_level_card_typst,
     "show",
     vec!["--format=typst"],
-    r#"- Not card
+    vec![
+        r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -124,13 +143,15 @@ test_card_output!(
   - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
 - Not card
 "#
+    ]
 );
 
 test_card_output!(
     single_top_level_card_storage,
     "show",
     vec!["--format=storage"],
-    r#"- Not card
+    vec![
+        r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -141,24 +162,28 @@ test_card_output!(
   - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
 - Not card
 "#
+    ]
 );
 
 test_card_output!(
     show_card_without_metadata_in_storage_format,
     "show",
     vec!["--format=storage"],
-    r#"- Not card
+    vec![
+        r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
   - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
 - Not card
 "#
+    ]
 );
 
 test_card_output!(
     show_card_with_reordered_metadata_in_storage_format,
     "show",
     vec!["--format=storage"],
-    r#"- Not card
+    vec![
+        r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
   card-last-reviewed:: 2025-04-28T09:12:30.985Z
   card-last-interval:: 244.14
@@ -169,13 +194,15 @@ test_card_output!(
   - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
 - Not card
 "#
+    ]
 );
 
 test_card_output!(
     card_with_data_after_metadata,
     "show",
-    Vec::<String>::new(),
-    r#"- Not card
+    Vec::<&str>::new(),
+    vec![
+        r#"- Not card
 - What is the relationship between angles $\\alpha$ and $\\gamma_{1}$ in the picture relative to the transversal?
   card-last-interval:: 30.0
   card-repeats:: 6
@@ -188,13 +215,15 @@ test_card_output!(
   - They are alternate angles.
 - Not card
 "#
+    ]
 );
 
 test_card_output!(
     card_with_unicode_prompt,
     "show",
-    Vec::<String>::new(),
-    r#"- Not card
+    Vec::<&str>::new(),
+    vec![
+        r#"- Not card
 - Какова связь между углами $\\alpha$ и $\\gamma_{1}$ на изображении относительно секущей?
   card-last-interval:: 30.0
   card-repeats:: 6
@@ -207,13 +236,15 @@ test_card_output!(
   - Они накрест лежащие.
 - Not card
 "#
+    ]
 );
 
 test_card_output!(
     single_top_level_card_metadata,
     "metadata",
-    Vec::<String>::new(),
-    r#"- Not card
+    Vec::<&str>::new(),
+    vec![
+        r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -224,13 +255,15 @@ test_card_output!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#
+    ]
 );
 
 test_card_output!(
     one_of_top_level_cards,
     "show",
     vec!["0xb9de554a02212aca"],
-    r#"- Not card
+    vec![
+        r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -249,6 +282,37 @@ test_card_output!(
   - $$V = \frac{4}{3} \pi r^3$$
 - Not card
 "#
+    ]
+);
+
+test_card_output!(
+    multiple_top_level_cards,
+    "show",
+    Vec::<&str>::new(),
+    vec![
+        r#"- Not card
+- What is the volume of a sphere (symbolic)? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-27T00:00:00.000Z
+  card-last-reviewed:: 2025-03-28T07:46:41.223Z
+  card-last-score:: 5
+  - $$V = \frac{4}{3} \pi r^3$$
+- Not card
+"#,
+        r#"- Not card
+- What is a sphere? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#
+    ]
 );
 
 #[derive(Serialize)]

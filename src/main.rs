@@ -3,7 +3,6 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Result;
-use anyhow::anyhow;
 use chrono::DateTime;
 use chrono::FixedOffset;
 use clap::Args;
@@ -15,6 +14,7 @@ use crate::output::OutputFormat;
 use crate::output::show_card;
 use crate::parse::extract_card_by_ref;
 use crate::parse::extract_card_metadatas;
+use crate::parse::find_page_files;
 use crate::types::CardMetadata;
 use crate::types::Fingerprint;
 
@@ -111,21 +111,21 @@ enum Commands {
     },
 }
 
-pub fn act_on_card_ref<F>(path: &Path, prompt_fingerprint: Option<Fingerprint>, f: F) -> Result<()>
+fn act_on_card_ref<F>(path: &Path, prompt_fingerprint: Option<Fingerprint>, f: F) -> Result<()>
 where
     F: Fn(&CardMetadata) -> Result<()>,
 {
-    if !path.exists() {
-        return Err(anyhow!("{} does not exist", path.display()));
-    }
-    let mut card_metadatas = extract_card_metadatas(path)
-        .with_context(|| format!("when processing {}", path.display()))?;
+    let page_files = find_page_files(path)?;
+    for page_file in page_files {
+        let mut card_metadatas = extract_card_metadatas(&page_file)
+            .with_context(|| format!("when processing {}", page_file.display()))?;
 
-    if let Some(prompt_fingerprint) = prompt_fingerprint {
-        card_metadatas.retain(|cm| cm.card_ref.prompt_fingerprint == prompt_fingerprint);
-    }
-    for cm in card_metadatas {
-        f(&cm)?;
+        if let Some(prompt_fingerprint) = prompt_fingerprint.clone() {
+            card_metadatas.retain(|cm| cm.card_ref.prompt_fingerprint == prompt_fingerprint);
+        }
+        for cm in card_metadatas {
+            f(&cm)?;
+        }
     }
     Ok(())
 }

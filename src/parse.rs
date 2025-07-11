@@ -1,9 +1,11 @@
 // TODO: rename to `storage`
+use std::ffi::OsStr;
 use std::fs::File;
 use std::fs::{self};
 use std::io::Write;
 use std::ops::RangeInclusive;
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -286,6 +288,28 @@ pub fn rewrite_card_srs_meta(card_ref: &CardRef, srs_meta: SRSMeta) -> Result<()
         card_ref.prompt_fingerprint,
         card_ref.source_path.display(),
     ))
+}
+
+pub fn find_page_files(path: &Path) -> Result<Vec<PathBuf>> {
+    if !path.exists() {
+        return Err(anyhow!("{} does not exist", path.display()));
+    }
+    if !path.is_dir() {
+        return Ok(vec![path.to_owned()]);
+    };
+    let pages_dir = path.join("pages");
+    if !pages_dir.exists() {
+        return Err(anyhow!(
+            "{} is a directory without a pages subdirectory, expected logseq graph root",
+            path.display()
+        ));
+    }
+    let page_files = std::fs::read_dir(pages_dir)?
+        .filter_map(Result::ok)
+        .map(|d| d.path())
+        .filter(|p| p.is_file() && p.extension() == Some(OsStr::new("md")))
+        .collect();
+    Ok(page_files)
 }
 
 #[cfg(test)]
