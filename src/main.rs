@@ -117,8 +117,9 @@ where
 {
     let page_files = find_page_files(path)?;
     for page_file in page_files {
-        let mut card_metadatas = extract_card_metadatas(&page_file)
-            .with_context(|| format!("when processing {}", page_file.display()))?;
+        let mut card_metadatas = extract_card_metadatas(&page_file).with_context(|| {
+            format!("when extracting card metadatas from {}", page_file.display())
+        })?;
 
         if let Some(prompt_fingerprint) = prompt_fingerprint.clone() {
             card_metadatas.retain(|cm| cm.card_ref.prompt_fingerprint == prompt_fingerprint);

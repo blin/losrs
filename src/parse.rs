@@ -7,6 +7,7 @@ use std::ops::RangeInclusive;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use chrono::DateTime;
@@ -173,27 +174,31 @@ impl SRSMeta {
             let Some((k, v)) = line.trim().split_once(":: ") else {
                 continue;
             };
-            match k {
-                "card-last-interval" => {
-                    srs_meta.last_interval = v.parse()?;
-                }
-                "card-repeats" => {
-                    srs_meta.repeats = v.parse()?;
-                }
-                "card-ease-factor" => {
-                    srs_meta.ease_factor = v.parse()?;
-                }
-                "card-next-schedule" => {
-                    srs_meta.next_schedule = DateTime::parse_from_rfc3339(v)?;
-                }
-                "card-last-reviewed" => {
-                    srs_meta.last_reviewed = DateTime::parse_from_rfc3339(v)?;
-                }
-                "card-last-score" => {
-                    srs_meta.last_score = v.parse()?;
-                }
-                _ => {}
-            };
+            (|| -> Result<()> {
+                match k {
+                    "card-last-interval" => {
+                        srs_meta.last_interval = v.parse()?;
+                    }
+                    "card-repeats" => {
+                        srs_meta.repeats = v.parse()?;
+                    }
+                    "card-ease-factor" => {
+                        srs_meta.ease_factor = v.parse()?;
+                    }
+                    "card-next-schedule" => {
+                        srs_meta.next_schedule = DateTime::parse_from_rfc3339(v)?;
+                    }
+                    "card-last-reviewed" => {
+                        srs_meta.last_reviewed = DateTime::parse_from_rfc3339(v)?;
+                    }
+                    "card-last-score" => {
+                        srs_meta.last_score = v.parse()?;
+                    }
+                    _ => {}
+                };
+                Ok(())
+            })()
+            .with_context(|| anyhow!("when processing key '{}'", k))?;
         }
         Ok(srs_meta)
     }
@@ -218,7 +223,8 @@ fn extract_card<'a>(
         metadata: CardMetadata {
             card_ref: CardRef { source_path: path, prompt_fingerprint: prompt.as_str().into() },
             prompt_prefix,
-            srs_meta: SRSMeta::from_prompt_lines(prompt_lines)?,
+            srs_meta: SRSMeta::from_prompt_lines(prompt_lines)
+                .with_context(|| "when extracting SRS meta")?,
         },
         body: CardBody { prompt, prompt_indent, response },
     })
@@ -228,11 +234,22 @@ pub fn extract_card_metadatas(path: &Path) -> Result<Vec<CardMetadata>> {
     let file_raw = fs::read_to_string(path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
 
-    let card_list_items = find_card_list_items(&file_raw)?;
+    let card_list_items = find_card_list_items(&file_raw)
+        .with_context(|| anyhow!("when searching for card list items"))?;
 
     let cards = card_list_items
         .iter()
-        .map(|li| extract_card(li, path, &file_raw_lines))
+        .map(|li| {
+            extract_card(li, path, &file_raw_lines).with_context(|| {
+                anyhow!(
+                    "when extracting a card from list item on line {}",
+                    li.position
+                        .as_ref()
+                        .map(|pos| pos.start.line)
+                        .expect("so far list items always have a start...")
+                )
+            })
+        })
         .collect::<Result<Vec<_>, _>>()?;
     let card_metadatas = cards.into_iter().map(|c| c.metadata).collect();
 
