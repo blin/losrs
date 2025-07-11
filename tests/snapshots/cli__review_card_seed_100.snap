@@ -1,0 +1,53 @@
+---
+source: tests/cli.rs
+info:
+  program: logseq-srs
+  args:
+    - review
+    - /tmp/.tmpxil2KQ/page.md
+    - "--at=2025-09-01T00:00:00Z"
+    - "--seed=100"
+  page_lines:
+    - "- Not card"
+    - "- Alphabet forward cards"
+    - "  - What is Gregg Simplified for \"N\" (description)? #card"
+    - "    card-last-interval:: 15.0"
+    - "    card-repeats:: 4"
+    - "    card-ease-factor:: 1.0"
+    - "    card-next-schedule:: 2025-08-12T09:03:05.489Z"
+    - "    card-last-reviewed:: 2025-07-04T09:03:05.489Z"
+    - "    card-last-score:: 1"
+    - "    - forward short stroke"
+    - "  - What is Gregg Simplified for \"M\" (description)? #card"
+    - "    card-last-interval:: 15.0"
+    - "    card-repeats:: 4"
+    - "    card-ease-factor:: 1.0"
+    - "    card-next-schedule:: 2025-08-12T09:03:05.489Z"
+    - "    card-last-reviewed:: 2025-07-04T09:03:05.489Z"
+    - "    card-last-score:: 1"
+    - "    - forward long stroke"
+    - "- Not card"
+    - ""
+  interaction_meta:
+    first card with given seed: "What is Gregg Simplified for \"N\" (description)?"
+    expected type of interaction: "review first card, then nope out"
+---
+- Not card
+- Alphabet forward cards
+  - What is Gregg Simplified for "N" (description)? #card
+    card-last-interval:: 97.65625
+    card-repeats:: 5
+    card-ease-factor:: 2.5
+    card-next-schedule:: 2025-12-07T15:45:00.000Z
+    card-last-reviewed:: 2025-09-01T00:00:00.000Z
+    card-last-score:: 5
+    - forward short stroke
+  - What is Gregg Simplified for "M" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward long stroke
+- Not card

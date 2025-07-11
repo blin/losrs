@@ -103,6 +103,10 @@ enum Commands {
         /// Affects both selection and updating.
         #[arg(long, value_parser = parse_datetime, value_name = "TIMESTAMP")]
         at: Option<DateTime<FixedOffset>>,
+
+        /// Seed used for shuffling cards ready to be reviewed
+        #[arg(long)]
+        seed: Option<u64>,
     },
     /// prints metadata for cards
     Metadata {
@@ -134,6 +138,14 @@ where
     Ok(())
 }
 
+fn shuffle_slice<T>(s: &mut [T], seed: u64) {
+    use rand::SeedableRng;
+    use rand::rngs::SmallRng;
+    use rand::seq::SliceRandom;
+    let mut rng = SmallRng::seed_from_u64(seed);
+    s.shuffle(&mut rng);
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     env_logger::Builder::new().filter_level(cli.verbosity.into()).init();
@@ -156,7 +168,12 @@ fn main() -> Result<()> {
                 Ok(())
             })?;
         }
-        Commands::Review { card_ref: CardRefArgs { path, prompt_fingerprint }, format, at } => {
+        Commands::Review {
+            card_ref: CardRefArgs { path, prompt_fingerprint },
+            format,
+            at,
+            seed,
+        } => {
             let at = match at {
                 Some(at) => at,
                 None => chrono::offset::Utc::now().fixed_offset(),
@@ -164,6 +181,7 @@ fn main() -> Result<()> {
 
             act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
                 card_metas.retain(|cm| cm.srs_meta.next_schedule <= at);
+                shuffle_slice(card_metas, seed.unwrap_or_default());
                 for cm in card_metas {
                     review::review_card(cm, (&format).into(), at)?
                 }

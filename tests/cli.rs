@@ -398,6 +398,14 @@ fn expect_no_review_interaction(p: &mut PtySession) -> Result<()> {
     Ok(())
 }
 
+fn expect_nope_out_interaction(p: &mut PtySession) -> Result<()> {
+    p.exp_string("Ctrl+C or Esc to nope out")?;
+    p.send_control('c')?;
+    p.read_line()?; // for the process to exit
+
+    Ok(())
+}
+
 macro_rules! test_card_review {
     ($name:ident, $subcommand:expr, $args:expr, $page:expr, $f:expr, $interaction_meta:expr ) => {
         #[test]
@@ -502,4 +510,86 @@ test_card_review!(
 "#,
     |p: &mut PtySession| -> Result<()> { expect_no_review_interaction(p) },
     HashMap::from([("expected type of interaction".to_string(), "no review".to_string()),])
+);
+
+test_card_review!(
+    review_card_seed_0,
+    "review",
+    vec!["--at=2025-09-01T00:00:00Z", "--seed=0"],
+    r#"- Not card
+- Alphabet forward cards
+  - What is Gregg Simplified for "N" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward short stroke
+  - What is Gregg Simplified for "M" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward long stroke
+- Not card
+"#,
+    |p: &mut PtySession| -> Result<()> {
+        expect_review_interaction(p, true)?;
+        expect_nope_out_interaction(p)?;
+        Ok(())
+    },
+    HashMap::from([
+        (
+            "expected type of interaction".to_string(),
+            "review first card, then nope out".to_string()
+        ),
+        (
+            "first card with given seed".to_string(),
+            r#"What is Gregg Simplified for "M" (description)?"#.to_string()
+        ),
+    ])
+);
+
+test_card_review!(
+    review_card_seed_100,
+    "review",
+    vec!["--at=2025-09-01T00:00:00Z", "--seed=100"],
+    r#"- Not card
+- Alphabet forward cards
+  - What is Gregg Simplified for "N" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward short stroke
+  - What is Gregg Simplified for "M" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward long stroke
+- Not card
+"#,
+    |p: &mut PtySession| -> Result<()> {
+        expect_review_interaction(p, true)?;
+        expect_nope_out_interaction(p)?;
+        Ok(())
+    },
+    HashMap::from([
+        (
+            "expected type of interaction".to_string(),
+            "review first card, then nope out".to_string()
+        ),
+        (
+            "first card with given seed".to_string(),
+            r#"What is Gregg Simplified for "N" (description)?"#.to_string()
+        ),
+    ])
 );
