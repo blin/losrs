@@ -2,10 +2,11 @@ MAKEFLAGS += --no-silent
 
 .PHONY: lint autofix
 
-lint:
+fix:
+	rustup run nightly cargo fmt --quiet
+
+test: fix
 	cargo clippy
 	cargo test
 	rustup run nightly cargo fmt --check
 
-fix:
-	rustup run nightly cargo fmt --quiet

@@ -11,6 +11,7 @@ use tempfile::NamedTempFile;
 
 use crate::types::Card;
 use crate::types::CardMetadata;
+use crate::types::SRSMeta;
 
 #[derive(Clone)]
 pub enum OutputFormat {
@@ -233,6 +234,40 @@ fn png_to_sixel(png_buf: Vec<u8>) -> Result<Vec<u8>> {
     Ok(output.stdout)
 }
 
+fn format_card_storage_text(
+    mut writer: impl std::io::Write,
+    text: &str,
+    indent: &str,
+) -> Result<()> {
+    for line in text.lines() {
+        writeln!(writer, "{indent}{line}")?
+    }
+    Ok(())
+}
+
+fn format_card_storage_srs_meta(
+    mut writer: impl std::io::Write,
+    srs_meta: &SRSMeta,
+    indent: &str,
+) -> Result<()> {
+    writeln!(writer, "{indent}card-last-interval:: {}", srs_meta.last_interval)?;
+    writeln!(writer, "{indent}card-repeats:: {}", srs_meta.repeats)?;
+    writeln!(writer, "{indent}card-ease-factor:: {}", srs_meta.ease_factor)?;
+    writeln!(
+        writer,
+        "{indent}card-next-schedule:: {}",
+        srs_meta.next_schedule.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+    )?;
+    writeln!(
+        writer,
+        "{indent}card-last-reviewed:: {}",
+        srs_meta.last_reviewed.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+    )?;
+    writeln!(writer, "{indent}card-last-score:: {}", srs_meta.last_score)?;
+
+    Ok(())
+}
+
 pub fn format_card_storage(
     card: &Card,
     mut writer: impl std::io::Write,
@@ -243,26 +278,10 @@ pub fn format_card_storage(
         return Err(anyhow!("can not output just the prompt in storage format"));
     }
     let prompt_indent = " ".repeat(card.body.prompt_indent);
-    let _ = card.body.prompt.lines().try_for_each(|l| writeln!(writer, "{prompt_indent}{l}"));
-
-    let srs_meta = &card.metadata.srs_meta;
-    let off_indent = " ".repeat(card.body.prompt_indent + 2);
-    writeln!(writer, "{off_indent}card-last-interval:: {}", srs_meta.last_interval)?;
-    writeln!(writer, "{off_indent}card-repeats:: {}", srs_meta.repeats)?;
-    writeln!(writer, "{off_indent}card-ease-factor:: {}", srs_meta.ease_factor)?;
-    writeln!(
-        writer,
-        "{off_indent}card-next-schedule:: {}",
-        srs_meta.next_schedule.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
-    )?;
-    writeln!(
-        writer,
-        "{off_indent}card-last-reviewed:: {}",
-        srs_meta.last_reviewed.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
-    )?;
-    writeln!(writer, "{off_indent}card-last-score:: {}", srs_meta.last_score)?;
-
-    let _ = card.body.response.lines().try_for_each(|l| writeln!(writer, "{prompt_indent}{l}"));
+    let meta_indent = " ".repeat(card.body.prompt_indent + 2);
+    format_card_storage_text(&mut writer, &card.body.prompt, &prompt_indent)?;
+    format_card_storage_srs_meta(&mut writer, &card.metadata.srs_meta, &meta_indent)?;
+    format_card_storage_text(&mut writer, &card.body.response, &prompt_indent)?;
 
     Ok(())
 }
