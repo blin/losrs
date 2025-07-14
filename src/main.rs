@@ -180,7 +180,7 @@ fn main() -> Result<()> {
             };
 
             act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
-                card_metas.retain(|cm| cm.srs_meta.next_schedule <= at);
+                card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= at);
                 shuffle_slice(card_metas, seed.unwrap_or_default());
                 for cm in card_metas {
                     review::review_card(cm, (&format).into(), at)?

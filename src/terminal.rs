@@ -74,7 +74,7 @@ pub fn wait_for_anykey(action_description: &str) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ReviewResponse {
     Remembered,
     Forgot,

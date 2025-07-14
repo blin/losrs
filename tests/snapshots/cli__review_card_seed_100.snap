@@ -4,7 +4,7 @@ info:
   program: logseq-srs
   args:
     - review
-    - /tmp/.tmpc8YKiG/page.md
+    - /tmp/.tmpIIoKd3/page.md
     - "--at=2025-09-01T00:00:00Z"
     - "--seed=100"
   page_lines:
@@ -35,12 +35,13 @@ info:
 - Not card
 - Alphabet forward cards
   - What is Gregg Simplified for "N" (description)? #card
-    card-last-interval:: 97.65625
+    card-last-interval:: 119
     card-repeats:: 5
     card-ease-factor:: 2.5
-    card-next-schedule:: 2025-12-07T15:45:00.000Z
+    card-next-schedule:: 2025-12-29T00:00:00.000Z
     card-last-reviewed:: 2025-09-01T00:00:00.000Z
     card-last-score:: 5
+    card-fsrs-metadata:: {"due":"2025-12-29T00:00:00Z","stability":118.75114444246826,"difficulty":4.9598188419861655,"elapsed_days":58,"scheduled_days":119,"reps":5,"lapses":0,"state":"Review","last_review":"2025-09-01T00:00:00Z"}
     - forward short stroke
   - What is Gregg Simplified for "M" (description)? #card
     card-last-interval:: 15.0

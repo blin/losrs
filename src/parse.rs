@@ -24,6 +24,8 @@ use crate::types::Card;
 use crate::types::CardBody;
 use crate::types::CardMetadata;
 use crate::types::CardRef;
+use crate::types::FSRSMeta;
+use crate::types::LogseqSRSMeta;
 use crate::types::SRSMeta;
 
 fn list_item_is_card(li: &mdast::ListItem) -> bool {
@@ -164,7 +166,8 @@ fn is_metadata_line(l: &str) -> bool {
 
 impl SRSMeta {
     fn from_prompt_lines(prompt_lines: &[&str]) -> Result<Self> {
-        let mut srs_meta = SRSMeta::default();
+        let mut logseq_srs_meta = LogseqSRSMeta::default();
+        let mut fsrs_meta: Option<FSRSMeta> = None;
 
         for line in prompt_lines {
             let Some((k, v)) = line.trim().split_once(":: ") else {
@@ -173,22 +176,25 @@ impl SRSMeta {
             (|| -> Result<()> {
                 match k {
                     "card-last-interval" => {
-                        srs_meta.last_interval = v.parse()?;
+                        logseq_srs_meta.last_interval = v.parse()?;
                     }
                     "card-repeats" => {
-                        srs_meta.repeats = v.parse()?;
+                        logseq_srs_meta.repeats = v.parse()?;
                     }
                     "card-ease-factor" => {
-                        srs_meta.ease_factor = v.parse()?;
+                        logseq_srs_meta.ease_factor = v.parse()?;
                     }
                     "card-next-schedule" => {
-                        srs_meta.next_schedule = DateTime::parse_from_rfc3339(v)?;
+                        logseq_srs_meta.next_schedule = DateTime::parse_from_rfc3339(v)?;
                     }
                     "card-last-reviewed" => {
-                        srs_meta.last_reviewed = DateTime::parse_from_rfc3339(v)?;
+                        logseq_srs_meta.last_reviewed = DateTime::parse_from_rfc3339(v)?;
                     }
                     "card-last-score" => {
-                        srs_meta.last_score = v.parse()?;
+                        logseq_srs_meta.last_score = v.parse()?;
+                    }
+                    "card-fsrs-metadata" => {
+                        fsrs_meta = Some(serde_json::from_str(v)?);
                     }
                     _ => {}
                 };
@@ -196,7 +202,17 @@ impl SRSMeta {
             })()
             .with_context(|| anyhow!("when processing key '{}'", k))?;
         }
-        Ok(srs_meta)
+        match fsrs_meta {
+            Some(fsrs_meta) => {
+                let logseq_srs_meta: LogseqSRSMeta = (&fsrs_meta).into();
+                Ok(SRSMeta { logseq_srs_meta, fsrs_meta })
+            }
+            None => {
+                // This case includes "neither metadata is present",
+                let fsrs_meta: FSRSMeta = (&logseq_srs_meta).into();
+                Ok(SRSMeta { logseq_srs_meta, fsrs_meta })
+            }
+        }
     }
 }
 
@@ -341,35 +357,4 @@ pub fn find_page_files(path: &Path) -> Result<Vec<PathBuf>> {
         .filter(|p| p.is_file() && p.extension() == Some(OsStr::new("md")))
         .collect();
     Ok(page_files)
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    use crate::parse::CardMetadata;
-    use crate::parse::CardRef;
-    use crate::parse::SRSMeta;
-
-    #[test]
-    fn test_card_metadata_debug() {
-        let path: PathBuf = "/tmp/page.md".into();
-        let prompt_prefix = "What is love? #card".to_owned();
-        let card_metadata = CardMetadata {
-            card_ref: CardRef { source_path: &path, prompt_fingerprint: 1.into() },
-            prompt_prefix: prompt_prefix,
-            srs_meta: SRSMeta::default(),
-        };
-        let expected = r#"CardMetadata {
-  source_path        : /tmp/page.md
-  prompt_fingerprint : 0x0000000000000001
-  prompt_prefix      : What is love? #card
-  srs_meta           : SRSMeta {
-    repeats       : 0
-    next_schedule : 1970-01-01T00:00:00+00:00
-    last_reviewed : 1970-01-01T00:00:00+00:00
-  }
-}"#;
-        assert_eq!(format!("{:?}", card_metadata), expected);
-    }
 }

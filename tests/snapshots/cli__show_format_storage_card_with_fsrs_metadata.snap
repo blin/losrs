@@ -1,0 +1,36 @@
+---
+source: tests/cli.rs
+info:
+  program: logseq-srs
+  args:
+    - show
+    - /tmp/.tmpLB8yOc
+    - "--format=storage"
+  page_lines:
+    - - "- Not card"
+      - "- What is a sphere? #card"
+      - "  card-last-interval:: 9.0"
+      - "  card-repeats:: 7"
+      - "  card-ease-factor:: 3.1"
+      - "  card-next-schedule:: 2025-12-01T00:00:00Z"
+      - "  card-last-reviewed:: 2025-11-22T00:00:00Z"
+      - "  card-last-score:: 5"
+      - "  card-fsrs-metadata:: {\"due\":\"2025-12-01T00:00:00Z\",\"stability\":8.774341658142419,\"difficulty\":7.040172161986166,\"elapsed_days\":245,\"scheduled_days\":9,\"reps\":7,\"lapses\":1,\"state\":\"Review\",\"last_review\":\"2025-11-22T00:00:00Z\"}"
+      - "  - Set of points in a 3 dimensional space that are equidistant from a center point."
+      - "- Not card"
+      - ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+- What is a sphere? #card
+  card-last-interval:: 9
+  card-repeats:: 7
+  card-ease-factor:: 2.5
+  card-next-schedule:: 2025-12-01T00:00:00.000Z
+  card-last-reviewed:: 2025-11-22T00:00:00.000Z
+  card-last-score:: 5
+  card-fsrs-metadata:: {"due":"2025-12-01T00:00:00Z","stability":8.774341658142419,"difficulty":7.040172161986166,"elapsed_days":245,"scheduled_days":9,"reps":7,"lapses":1,"state":"Review","last_review":"2025-11-22T00:00:00Z"}
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+
+----- stderr -----

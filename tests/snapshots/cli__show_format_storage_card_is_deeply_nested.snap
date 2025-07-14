@@ -4,7 +4,7 @@ info:
   program: logseq-srs
   args:
     - show
-    - /tmp/.tmp8HUNil
+    - /tmp/.tmp7cEQO3
     - "--format=storage"
   page_lines:
     - - "- Not card"
@@ -31,6 +31,7 @@ exit_code: 0
       card-next-schedule:: 2026-01-25T00:00:00.000Z
       card-last-reviewed:: 2025-05-26T09:11:31.735Z
       card-last-score:: 5
+      card-fsrs-metadata:: {"due":"2026-01-25T00:00:00Z","stability":244.14,"difficulty":5.0,"elapsed_days":244,"scheduled_days":244,"reps":6,"lapses":0,"state":"Review","last_review":"2025-05-26T09:11:31.735Z"}
       - Fixpoint
 
 ----- stderr -----

@@ -181,6 +181,26 @@ test_card_output!(
 );
 
 test_card_output!(
+    show_format_storage_card_with_fsrs_metadata,
+    "show",
+    vec!["--format=storage"],
+    vec![
+        r#"- Not card
+- What is a sphere? #card
+  card-last-interval:: 9.0
+  card-repeats:: 7
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-12-01T00:00:00Z
+  card-last-reviewed:: 2025-11-22T00:00:00Z
+  card-last-score:: 5
+  card-fsrs-metadata:: {"due":"2025-12-01T00:00:00Z","stability":8.774341658142419,"difficulty":7.040172161986166,"elapsed_days":245,"scheduled_days":9,"reps":7,"lapses":1,"state":"Review","last_review":"2025-11-22T00:00:00Z"}
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#
+    ]
+);
+
+test_card_output!(
     show_format_storage_card_with_reordered_metadata,
     "show",
     vec!["--format=storage"],
@@ -485,6 +505,55 @@ test_card_review!(
   card-next-schedule:: 2025-11-21T00:00:00.000Z
   card-last-reviewed:: 2025-03-22T09:54:57.202Z
   card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#,
+    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
+    HashMap::from([
+        ("expected type of interaction".to_string(), "review".to_string()),
+        ("remembered".to_string(), "false".to_string())
+    ])
+);
+
+test_card_review!(
+    review_card_without_meta_remembered_yes,
+    "review",
+    vec!["--at=2025-11-22T00:00:00Z"],
+    r#"- Not card
+- What is a sphere? #card
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#,
+    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
+    HashMap::from([
+        ("expected type of interaction".to_string(), "review".to_string()),
+        ("remembered".to_string(), "true".to_string())
+    ])
+);
+
+test_card_review!(
+    review_card_without_meta_remembered_no,
+    "review",
+    vec!["--at=2025-11-22T00:00:00Z"],
+    r#"- Not card
+- What is a sphere? #card
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#,
+    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
+    HashMap::from([
+        ("expected type of interaction".to_string(), "review".to_string()),
+        ("remembered".to_string(), "false".to_string())
+    ])
+);
+
+test_card_review!(
+    review_card_second_remembered_no,
+    "review",
+    vec!["--at=2025-11-23T00:00:00Z"],
+    r#"- Not card
+- What is a sphere? #card
+  card-fsrs-metadata:: {"due":"2025-11-23T00:00:00Z","stability":0.4072,"difficulty":7.2102,"elapsed_days":0,"scheduled_days":1,"reps":1,"lapses":0,"state":"Review","last_review":"2025-11-22T00:00:00Z"}
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,

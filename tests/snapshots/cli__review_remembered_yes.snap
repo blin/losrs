@@ -4,7 +4,7 @@ info:
   program: logseq-srs
   args:
     - review
-    - /tmp/.tmpiG0yMd/page.md
+    - /tmp/.tmpPSCirm/page.md
     - "--at=2025-11-22T00:00:00Z"
   page_lines:
     - "- Not card"
@@ -24,11 +24,12 @@ info:
 ---
 - Not card
 - What is a sphere? #card
-  card-last-interval:: 610.3515625
+  card-last-interval:: 605
   card-repeats:: 7
   card-ease-factor:: 2.5
-  card-next-schedule:: 2027-07-25T08:26:15.000Z
+  card-next-schedule:: 2027-07-20T00:00:00.000Z
   card-last-reviewed:: 2025-11-22T00:00:00.000Z
   card-last-score:: 5
+  card-fsrs-metadata:: {"due":"2027-07-20T00:00:00Z","stability":604.5838949007804,"difficulty":4.9598188419861655,"elapsed_days":244,"scheduled_days":605,"reps":7,"lapses":0,"state":"Review","last_review":"2025-11-22T00:00:00Z"}
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card

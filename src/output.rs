@@ -258,20 +258,26 @@ fn format_card_storage_srs_meta(
     srs_meta: &SRSMeta,
     indent: &str,
 ) -> Result<()> {
-    writeln!(writer, "{indent}card-last-interval:: {}", srs_meta.last_interval)?;
-    writeln!(writer, "{indent}card-repeats:: {}", srs_meta.repeats)?;
-    writeln!(writer, "{indent}card-ease-factor:: {}", srs_meta.ease_factor)?;
+    let logseq_srs_meta = &srs_meta.logseq_srs_meta;
+    writeln!(writer, "{indent}card-last-interval:: {}", logseq_srs_meta.last_interval)?;
+    writeln!(writer, "{indent}card-repeats:: {}", logseq_srs_meta.repeats)?;
+    writeln!(writer, "{indent}card-ease-factor:: {}", logseq_srs_meta.ease_factor)?;
     writeln!(
         writer,
         "{indent}card-next-schedule:: {}",
-        srs_meta.next_schedule.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+        logseq_srs_meta.next_schedule.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
     )?;
     writeln!(
         writer,
         "{indent}card-last-reviewed:: {}",
-        srs_meta.last_reviewed.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+        logseq_srs_meta.last_reviewed.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
     )?;
-    writeln!(writer, "{indent}card-last-score:: {}", srs_meta.last_score)?;
+    writeln!(writer, "{indent}card-last-score:: {}", logseq_srs_meta.last_score)?;
+    writeln!(
+        writer,
+        "{indent}card-fsrs-metadata:: {}",
+        serde_json::to_string(&srs_meta.fsrs_meta)?
+    )?;
 
     Ok(())
 }

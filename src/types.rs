@@ -4,6 +4,10 @@ use std::path::Path;
 use chrono::DateTime;
 use chrono::FixedOffset;
 
+use rs_fsrs;
+
+pub type FSRSMeta = rs_fsrs::Card;
+
 #[derive(PartialEq, Clone)]
 pub struct Fingerprint(pub u64);
 
@@ -37,8 +41,6 @@ pub struct CardRef<'a> {
     pub prompt_fingerprint: Fingerprint,
 }
 
-// Spaced Repetition System (SRS) Metadata
-//
 // Logseq standard format:
 //   card-last-interval:: 39.06
 //   card-repeats:: 4
@@ -51,16 +53,18 @@ pub struct CardRef<'a> {
 // but we preserve them anyway to enable simultaneous use with Logseq.
 // The order of properties is from `operation-score!` function in Logseq.
 #[derive(Debug, Clone)]
-pub struct SRSMeta {
+pub struct LogseqSRSMeta {
     pub last_interval: f64,
+    // TODO: change repeats type to i32 to match fsrs meta
     pub repeats: u8,
     pub ease_factor: f64,
+    // TODO: change next_schedule and last_reviewied types to DateTime<Utc> to match fsrs meta
     pub next_schedule: DateTime<FixedOffset>,
     pub last_reviewed: DateTime<FixedOffset>,
     pub last_score: u8,
 }
 
-impl Default for SRSMeta {
+impl Default for LogseqSRSMeta {
     fn default() -> Self {
         Self {
             last_interval: -1.0,
@@ -71,6 +75,48 @@ impl Default for SRSMeta {
             last_score: 5,
         }
     }
+}
+
+impl From<&LogseqSRSMeta> for FSRSMeta {
+    fn from(logseq_srs_meta: &LogseqSRSMeta) -> Self {
+        // LogseqSRSMeta::default() has last_interval < 0
+        if logseq_srs_meta.last_interval <= 0.0f64 {
+            FSRSMeta::default()
+        } else {
+            FSRSMeta {
+                due: logseq_srs_meta.next_schedule.into(),
+                stability: logseq_srs_meta.last_interval,
+                difficulty: 5.0,
+                elapsed_days: logseq_srs_meta.last_interval as i64,
+                scheduled_days: logseq_srs_meta.last_interval as i64,
+                reps: logseq_srs_meta.repeats as i32,
+                lapses: 0,
+                state: rs_fsrs::State::Review,
+                last_review: logseq_srs_meta.last_reviewed.into(),
+            }
+        }
+    }
+}
+
+impl From<&FSRSMeta> for LogseqSRSMeta {
+    fn from(fsrs_meta: &FSRSMeta) -> Self {
+        LogseqSRSMeta {
+            last_interval: fsrs_meta.scheduled_days as f64,
+            repeats: fsrs_meta.reps as u8,
+            ease_factor: 2.5,
+            next_schedule: fsrs_meta.due.into(),
+            last_reviewed: fsrs_meta.last_review.into(),
+            last_score: 5,
+        }
+    }
+}
+
+// Spaced Repetition System (SRS) Metadata
+#[derive(Debug, Clone)]
+pub struct SRSMeta {
+    pub logseq_srs_meta: LogseqSRSMeta,
+    // fsrs_meta is optional on read, but we will always write it out
+    pub fsrs_meta: FSRSMeta,
 }
 
 pub struct CardMetadata<'a> {
@@ -86,9 +132,10 @@ impl Debug for CardMetadata<'_> {
         writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
         writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
         writeln!(f, "  srs_meta           : SRSMeta {{")?;
-        writeln!(f, "    repeats       : {}", self.srs_meta.repeats)?;
-        writeln!(f, "    next_schedule : {:?}", self.srs_meta.next_schedule)?;
-        writeln!(f, "    last_reviewed : {:?}", self.srs_meta.last_reviewed)?;
+        writeln!(f, "    repeats       : {}", self.srs_meta.logseq_srs_meta.repeats)?;
+        writeln!(f, "    next_schedule : {:?}", self.srs_meta.logseq_srs_meta.next_schedule)?;
+        writeln!(f, "    last_reviewed : {:?}", self.srs_meta.logseq_srs_meta.last_reviewed)?;
+        writeln!(f, "    fsrs_meta     : {:?}", self.srs_meta.fsrs_meta)?;
         writeln!(f, "  }}")?;
         write!(f, "}}")
     }

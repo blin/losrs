@@ -2,8 +2,9 @@ use anyhow::Context;
 use anyhow::Ok;
 use anyhow::Result;
 use chrono::DateTime;
-use chrono::Duration;
 use chrono::FixedOffset;
+use rs_fsrs::FSRS;
+use rs_fsrs::Rating;
 
 use crate::output::OutputFormat;
 use crate::output::show_card;
@@ -15,30 +16,31 @@ use crate::terminal::clear_screen;
 use crate::terminal::wait_for_anykey;
 use crate::terminal::wait_for_review;
 use crate::types::CardMetadata;
+use crate::types::FSRSMeta;
 use crate::types::SRSMeta;
+
+fn compute_next_fsrs_meta(
+    srs_meta: &SRSMeta,
+    resp: &ReviewResponse,
+    reviewed_at: DateTime<FixedOffset>,
+) -> FSRSMeta {
+    let fsrs_params = rs_fsrs::Parameters { enable_short_term: false, ..Default::default() };
+    let fsrs = FSRS::new(fsrs_params);
+
+    let rating = if *resp == ReviewResponse::Forgot { Rating::Again } else { Rating::Good };
+    let next = fsrs.next(srs_meta.fsrs_meta.clone(), reviewed_at.into(), rating);
+    next.card
+}
 
 fn compute_next_srs_meta(
     srs_meta: &SRSMeta,
     resp: &ReviewResponse,
     reviewed_at: DateTime<FixedOffset>,
 ) -> SRSMeta {
-    let repeats = match resp {
-        ReviewResponse::Remembered => srs_meta.repeats + 1,
-        ReviewResponse::Forgot => 0,
-    };
-    let offset_days = (2.5_f64).powi(repeats.into());
-    let day_seconds = Duration::days(1).as_seconds_f64();
-    let offset = Duration::seconds((day_seconds * offset_days) as i64);
-    let next_schedule = reviewed_at + offset;
+    let next_fsrs_meta = compute_next_fsrs_meta(srs_meta, resp, reviewed_at);
+    let next_logseq_srs_meta = (&next_fsrs_meta).into();
 
-    SRSMeta {
-        repeats,
-        next_schedule,
-        last_reviewed: reviewed_at,
-        last_interval: offset_days,
-        ease_factor: 2.5,
-        last_score: 5,
-    }
+    SRSMeta { logseq_srs_meta: next_logseq_srs_meta, fsrs_meta: next_fsrs_meta }
 }
 
 pub fn review_card(
