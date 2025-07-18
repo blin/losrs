@@ -318,15 +318,22 @@ pub fn rewrite_card_srs_meta(card_ref: &CardRef, srs_meta: SRSMeta) -> Result<()
         card.metadata.srs_meta = srs_meta.clone();
         if card.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
             let (p_lines, l_lines) = find_card_ranges(li)?;
-
             let mut f = File::create(path)?;
-            // TODO: avoid adding a newline at the beginning of the page file when it starts with a card
-            f.write_all(file_raw_lines[..p_lines.into_inner().0].to_vec().join("\n").as_bytes())?;
-            f.write_all("\n".as_bytes())?;
+
+            let pre_lines = &file_raw_lines[..p_lines.into_inner().0];
+            if !pre_lines.is_empty() {
+                f.write_all(pre_lines.join("\n").as_bytes())?;
+                f.write_all("\n".as_bytes())?;
+            }
+
             format_card_storage(&card, &mut f, &CardBodyParts::All)?;
-            f.write_all(
-                file_raw_lines[l_lines.into_inner().1 + 1..].to_vec().join("\n").as_bytes(),
-            )?;
+
+            let post_lines = &file_raw_lines[l_lines.into_inner().1 + 1..];
+            if !post_lines.is_empty() {
+                f.write_all(post_lines.join("\n").as_bytes())?;
+                f.write_all("\n".as_bytes())?;
+            }
+
             return Ok(());
         }
     }

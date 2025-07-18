@@ -682,3 +682,38 @@ test_card_review!(
         ),
     ])
 );
+
+#[test]
+fn newline_writeback_on_review() -> Result<()> {
+    let args = vec!["--at=2025-11-22T00:00:00Z"];
+    let page = r#"- What is a sphere? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card"#;
+    let graph_root = construct_graph_root(&[page])?;
+    let cmd = construct_command("review", graph_root.path(), &args);
+
+    let mut p = spawn_command(cmd, Some(1000))?;
+
+    expect_review_interaction(&mut p, true)?;
+
+    let status = p.process.status().ok_or(anyhow!("could not get process status"))?;
+    match status {
+        WaitStatus::Exited(_, _) => {}
+        _ => return Err(anyhow!("expected process to exit, got {:?}", status)),
+    }
+
+    let page_raw = read_solitary_page(graph_root.path())?;
+    let leading_newline_count = page_raw.chars().take_while(|&c| c == '\n').count();
+    let trailing_newline_count = page_raw.chars().rev().take_while(|&c| c == '\n').count();
+
+    assert_eq!(leading_newline_count, 0, "expect 0 leading newlines when file is just one card");
+    assert_eq!(trailing_newline_count, 1, "expect 1 trailing newline when file is just one card");
+
+    Ok(())
+}
