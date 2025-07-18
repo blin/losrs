@@ -7,7 +7,6 @@ use anyhow::Result;
 use anyhow::anyhow;
 use serde::Serialize;
 
-use assert_fs::prelude::FileWriteStr;
 use insta_cmd::get_cargo_bin;
 use rexpect::process::wait::WaitStatus;
 use rexpect::session::PtySession;
@@ -54,24 +53,36 @@ fn insta_cmd_describe_program(cmd: &std::ffi::OsStr) -> String {
     name.into()
 }
 
+fn construct_graph_root(pages: &[&str]) -> Result<tempfile::TempDir> {
+    let graph_root = tempfile::TempDir::new()?;
+    let pages_dir = graph_root.path().join("pages");
+    std::fs::create_dir(pages_dir.as_path())?;
+
+    pages.iter().enumerate().for_each(|(idx, page)| {
+        fs::write(pages_dir.join(format!("{}.md", idx)), page)
+            .expect("expect temp page writes to succeed")
+    });
+
+    Ok(graph_root)
+}
+
+fn construct_command(subcommand: &str, graph_root: &Path, args: &[&str]) -> Command {
+    let mut cmd = Command::new(get_cargo_bin("logseq-srs"));
+    cmd.arg(subcommand).arg(graph_root).args(args);
+    cmd
+}
+
 macro_rules! test_card_output {
     ($name:ident, $subcommand:expr, $args:expr, $pages:expr ) => {
         #[test]
         fn $name() -> Result<()> {
-            let pages = $pages;
-            let subcommand = $subcommand;
-            let args = $args;
-            let graph_root = tempfile::TempDir::new()?;
-            let pages_dir = graph_root.path().join("pages");
-            std::fs::create_dir(pages_dir.as_path())?;
+            let subcommand: &str = $subcommand;
+            let args: Vec<&str> = $args;
+            let pages: Vec<&str> = $pages;
 
-            pages.iter().enumerate().for_each(|(idx, page)| {
-                fs::write(pages_dir.join(format!("{}.md", idx)), page)
-                    .expect("expect temp page writes to succeed")
-            });
+            let graph_root = construct_graph_root(&pages)?;
+            let mut cmd = construct_command(subcommand, graph_root.path(), &args);
 
-            let mut cmd = Command::new(get_cargo_bin("logseq-srs"));
-            cmd.arg(subcommand).arg(graph_root.path()).args(args);
             let output = cmd.output().unwrap();
 
             insta::with_settings!({
@@ -428,21 +439,34 @@ fn expect_nope_out_interaction(p: &mut PtySession) -> Result<()> {
     Ok(())
 }
 
+fn read_solitary_page(graph_root: &Path) -> Result<String> {
+    let page_paths = fs::read_dir(graph_root.join("pages"))?
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .collect::<Vec<_>>();
+    if page_paths.len() != 1 {
+        return Err(anyhow!(
+            "expected {graph_root:?} to have exactly 1 page, got: {}",
+            page_paths.len()
+        ));
+    }
+    let page_path = &page_paths[0];
+    Ok(fs::read_to_string(page_path)?)
+}
+
 macro_rules! test_card_review {
-    ($name:ident, $subcommand:expr, $args:expr, $page:expr, $f:expr, $interaction_meta:expr ) => {
+    ($name:ident, $args:expr, $page:expr, $f:expr, $interaction_meta:expr ) => {
         #[test]
         fn $name() -> Result<()> {
-            let f:fn(&mut PtySession) -> Result<()> = $f;
+            let args: Vec<&str> = $args;
+            let page: &str = $page;
+            let f: fn(&mut PtySession) -> Result<()> = $f;
             let interaction_meta: HashMap<String, String> = $interaction_meta;
-            // TODO: replace with tempfile::NamedTempFile to have one fewer dependency
-            let file = assert_fs::NamedTempFile::new("page.md").unwrap();
-            file.write_str($page).unwrap();
 
-            let mut cmd = Command::new(get_cargo_bin("logseq-srs"));
-            cmd.arg($subcommand).arg(file.path()).args($args);
+            let graph_root = construct_graph_root(&[page])?;
+            let cmd = construct_command("review", graph_root.path(), &args);
 
-
-            let cmd_info = &ReviewInfo::new(&cmd, $page, interaction_meta);
+            let cmd_info = &ReviewInfo::new(&cmd, page, interaction_meta);
             let mut p = spawn_command(cmd, Some(1000))?;
 
             f(&mut p)?;
@@ -454,7 +478,7 @@ macro_rules! test_card_review {
                 _ => return Err(anyhow!("expected process to exit, got {:?}", status)),
             }
 
-            let file_raw = fs::read_to_string(file)?;
+            let file_raw = read_solitary_page(graph_root.path())?;
             insta::with_settings!({
                 omit_expression => true,
                 info => cmd_info,
@@ -473,7 +497,6 @@ macro_rules! test_card_review {
 
 test_card_review!(
     review_remembered_yes,
-    "review",
     vec!["--at=2025-11-22T00:00:00Z"],
     r#"- Not card
 - What is a sphere? #card
@@ -495,7 +518,6 @@ test_card_review!(
 
 test_card_review!(
     review_remembered_no,
-    "review",
     vec!["--at=2025-11-22T00:00:00Z"],
     r#"- Not card
 - What is a sphere? #card
@@ -517,7 +539,6 @@ test_card_review!(
 
 test_card_review!(
     review_card_without_meta_remembered_yes,
-    "review",
     vec!["--at=2025-11-22T00:00:00Z"],
     r#"- Not card
 - What is a sphere? #card
@@ -533,7 +554,6 @@ test_card_review!(
 
 test_card_review!(
     review_card_without_meta_remembered_no,
-    "review",
     vec!["--at=2025-11-22T00:00:00Z"],
     r#"- Not card
 - What is a sphere? #card
@@ -549,7 +569,6 @@ test_card_review!(
 
 test_card_review!(
     review_card_second_remembered_no,
-    "review",
     vec!["--at=2025-11-23T00:00:00Z"],
     r#"- Not card
 - What is a sphere? #card
@@ -568,7 +587,6 @@ test_card_output!(review_help, "review", vec!["--help"], vec![""]);
 
 test_card_review!(
     review_card_not_ready,
-    "review",
     vec!["--at=2024-01-01T00:00:00Z"],
     r#"- Not card
 - What is a sphere? #card
@@ -587,7 +605,6 @@ test_card_review!(
 
 test_card_review!(
     review_card_seed_0,
-    "review",
     vec!["--at=2025-09-01T00:00:00Z", "--seed=0"],
     r#"- Not card
 - Alphabet forward cards
@@ -628,7 +645,6 @@ test_card_review!(
 
 test_card_review!(
     review_card_seed_100,
-    "review",
     vec!["--at=2025-09-01T00:00:00Z", "--seed=100"],
     r#"- Not card
 - Alphabet forward cards

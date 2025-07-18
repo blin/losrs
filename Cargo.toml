@@ -20,7 +20,6 @@ tempfile = "3.20.0"
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 
 [dev-dependencies]
-assert_fs = "1.1.3"
 insta = { version = "1.43.1", features = ["filters"] }
 insta-cmd = "0.6.0"
 rexpect = "0.6.2"
