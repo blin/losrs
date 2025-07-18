@@ -4,7 +4,7 @@ info:
   program: logseq-srs
   args:
     - show
-    - /tmp/.tmp1ZhH4t
+    - /tmp/.tmp8dKgdy
     - "--format=storage"
   page_lines:
     - - "- Not card"
@@ -17,7 +17,7 @@ success: true
 exit_code: 0
 ----- stdout -----
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
-  card-last-interval:: -1
+  card-last-interval:: 0
   card-repeats:: 0
   card-ease-factor:: 2.5
   card-next-schedule:: 1970-01-01T00:00:00.000Z

@@ -205,6 +205,7 @@ fn main() -> Result<()> {
         Commands::FixMetadata { card_ref: CardRefArgs { path, prompt_fingerprint } } => {
             act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
                 for cm in card_metas {
+                    // TODO: detect cards that are in the same file with the same fingerprint and nope out
                     parse::rewrite_card_srs_meta(&cm.card_ref, &cm.srs_meta)?;
                 }
                 Ok(())

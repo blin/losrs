@@ -66,8 +66,15 @@ pub struct LogseqSRSMeta {
 
 impl Default for LogseqSRSMeta {
     fn default() -> Self {
+        // [tag:card-last-interval-default]
+        // Logseq defaults are defined in default-card-properties-map
+        // card-last-interval-property by deault is -1
+        // but we use 0 so that
+        // LogseqSRSMeta::default() and LogseqSRSMeta::from(&FSRSMeta::default())
+        // are roughly compatible.
+        // TODO: actually test this
         Self {
-            last_interval: -1.0,
+            last_interval: 0.0,
             repeats: 0,
             ease_factor: 2.5,
             next_schedule: DateTime::UNIX_EPOCH.fixed_offset(),
@@ -79,7 +86,8 @@ impl Default for LogseqSRSMeta {
 
 impl From<&LogseqSRSMeta> for FSRSMeta {
     fn from(logseq_srs_meta: &LogseqSRSMeta) -> Self {
-        // LogseqSRSMeta::default() has last_interval < 0
+        // We use [ref:card-last-interval-default]
+        // to detect new cards.
         if logseq_srs_meta.last_interval <= 0.0f64 {
             FSRSMeta::default()
         } else {
