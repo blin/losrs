@@ -113,6 +113,11 @@ enum Commands {
         #[command(flatten)]
         card_ref: CardRefArgs,
     },
+    /// fix metadata for cards
+    FixMetadata {
+        #[command(flatten)]
+        card_ref: CardRefArgs,
+    },
 }
 
 fn act_on_card_ref<F>(path: &Path, prompt_fingerprint: Option<Fingerprint>, f: F) -> Result<()>
@@ -193,6 +198,14 @@ fn main() -> Result<()> {
             act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
                 for cm in card_metas {
                     output::show_metadata(cm)?;
+                }
+                Ok(())
+            })?;
+        }
+        Commands::FixMetadata { card_ref: CardRefArgs { path, prompt_fingerprint } } => {
+            act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
+                for cm in card_metas {
+                    parse::rewrite_card_srs_meta(&cm.card_ref, &cm.srs_meta)?;
                 }
                 Ok(())
             })?;

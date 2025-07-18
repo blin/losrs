@@ -87,7 +87,7 @@ pub fn review_card(
     let next_srs_meta =
         compute_next_srs_meta(&card.metadata.srs_meta, &review_response, reviewed_at);
 
-    rewrite_card_srs_meta(&card.metadata.card_ref, next_srs_meta)?;
+    rewrite_card_srs_meta(&card.metadata.card_ref, &next_srs_meta)?;
 
     Ok(())
 }

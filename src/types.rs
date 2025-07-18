@@ -98,6 +98,7 @@ impl From<&LogseqSRSMeta> for FSRSMeta {
     }
 }
 
+// TODO: running fix-metadata the second time produces a different result, fix.
 impl From<&FSRSMeta> for LogseqSRSMeta {
     fn from(fsrs_meta: &FSRSMeta) -> Self {
         LogseqSRSMeta {

@@ -306,7 +306,7 @@ pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
     ))
 }
 
-pub fn rewrite_card_srs_meta(card_ref: &CardRef, srs_meta: SRSMeta) -> Result<()> {
+pub fn rewrite_card_srs_meta(card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<()> {
     let path = card_ref.source_path;
     let file_raw = fs::read_to_string(path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
