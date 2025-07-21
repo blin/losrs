@@ -5,6 +5,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 
 use crossterm::QueueableCommand;
+use crossterm::cursor::MoveTo;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
@@ -17,6 +18,7 @@ use crossterm::terminal::enable_raw_mode;
 
 pub fn clear_screen() -> Result<()> {
     let mut stdout = stdout();
+    stdout.queue(MoveTo(0, 0))?;
     stdout.queue(Clear(ClearType::All))?;
     stdout.flush()?;
     Ok(())
