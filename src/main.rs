@@ -12,15 +12,15 @@ use clap::ValueEnum;
 
 use crate::output::OutputFormat;
 use crate::output::show_card;
-use crate::parse::extract_card_by_ref;
-use crate::parse::extract_card_metadatas;
-use crate::parse::find_page_files;
+use crate::storage::extract_card_by_ref;
+use crate::storage::extract_card_metadatas;
+use crate::storage::find_page_files;
 use crate::types::CardMetadata;
 use crate::types::Fingerprint;
 
 pub mod output;
-pub mod parse;
 pub mod review;
+pub mod storage;
 pub mod terminal;
 pub mod types;
 
@@ -206,7 +206,7 @@ fn main() -> Result<()> {
             act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
                 for cm in card_metas {
                     // TODO: detect cards that are in the same file with the same fingerprint and nope out
-                    parse::rewrite_card_srs_meta(&cm.card_ref, &cm.srs_meta)?;
+                    storage::rewrite_card_srs_meta(&cm.card_ref, &cm.srs_meta)?;
                 }
                 Ok(())
             })?;

@@ -1,4 +1,3 @@
-// TODO: rename to `storage`
 use std::ffi::OsStr;
 use std::fs::File;
 use std::fs::{self};
