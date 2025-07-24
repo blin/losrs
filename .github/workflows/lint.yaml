@@ -1,0 +1,67 @@
+name: Lint
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Check PATH
+      run: |
+        echo "$PATH"
+    - name: pandoc-dep
+      run: |
+        PANDOC_VERSION="3.7.0.2"
+        PANDOC_ARCHIVE="pandoc-${PANDOC_VERSION}-linux-amd64.tar.gz"
+        PANDOC_URL="https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/${PANDOC_ARCHIVE}"
+        INSTALL_DIR="${HOME}/.local/bin"
+        mkdir -p "${INSTALL_DIR}"
+
+        echo "Downloading Pandoc from ${PANDOC_URL}"
+        curl -L "${PANDOC_URL}" -o "${RUNNER_TEMP}/pandoc.tar.gz"
+
+        echo "Extracting pandoc executable to ${INSTALL_DIR}"
+        # The tarball contains a top-level directory like pandoc-3.7.0.2/pandoc
+        # We use --wildcards "*/pandoc" and --strip-components=1 to extract
+        # just the 'pandoc' executable directly.
+        tar -xvzf "${RUNNER_TEMP}/pandoc.tar.gz" --wildcards "*/pandoc" --strip-components=2
+        mv pandoc "${INSTALL_DIR}"
+
+        ls -l "${INSTALL_DIR}"
+    - name: Verify pandoc
+      run: pandoc --version
+    - name: Download Typst
+      uses: robinraju/release-downloader@v1
+      with:
+        repository: typst/typst
+        tag: v0.13.1
+        fileName: typst-x86_64-unknown-linux-musl.tar.xz
+        out-file-path: typst-download
+        extract: false
+    - name: typst-dep
+      run: |
+        INSTALL_DIR="${HOME}/.local/bin"
+        mkdir -p "${INSTALL_DIR}"
+        tar -xvJf typst-download/typst-x86_64-unknown-linux-musl.tar.xz --strip-components=1 --wildcards '*/typst'
+        mv typst "${INSTALL_DIR}"
+
+        ls -l "${INSTALL_DIR}"
+    - name: Verify typst
+      run: typst --version
+    - name: apt-deps
+      run: |
+        sudo apt install libsixel-bin -y
+    - name: Build
+      run: cargo build
+    - name: Run tests
+      run: cargo test
