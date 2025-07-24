@@ -1,0 +1,67 @@
+name: Lint
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Check PATH
+      run: |
+        echo "$PATH"
+    - name: pandoc-dep
+      run: |
+        PANDOC_VERSION="3.7.0.2"
+        PANDOC_ARCHIVE="pandoc-${PANDOC_VERSION}-linux-amd64.tar.gz"
+        PANDOC_URL="https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/${PANDOC_ARCHIVE}"
+        INSTALL_DIR="${HOME}/.local/bin"
+        mkdir -p "${INSTALL_DIR}"
+
+        echo "Downloading Pandoc from ${PANDOC_URL}"
+        curl -L "${PANDOC_URL}" -o "${RUNNER_TEMP}/pandoc.tar.gz"
+
+        echo "Extracting pandoc executable to ${INSTALL_DIR}"
+        # The tarball contains a top-level directory like pandoc-3.7.0.2/pandoc
+        # We use --wildcards "*/pandoc" and --strip-components=1 to extract
+        # just the 'pandoc' executable directly.
+        tar -xvzf "${RUNNER_TEMP}/pandoc.tar.gz" --wildcards "*/pandoc" --strip-components=2
+        mv pandoc "${INSTALL_DIR}"
+
+        ls -l "${INSTALL_DIR}"
+    - name: Verify pandoc
+      run: pandoc --version
+    - name: typst-dep
+      run: |
+        TYPST_VERSION="v0.13.1"
+        TYPST_ARCHIVE="typst-x86_64-unknown-linux-musl.tar.xz"
+        TYPST_URL="https://github.com/typst/typst/releases/download/${TYPST_VERSION}/${TYPST_ARCHIVE}"
+        INSTALL_DIR="${HOME}/.local/bin"
+        mkdir -p "${INSTALL_DIR}"
+
+        echo "Downloading Typst from ${TYPST_URL}"
+        curl -L "${TYPST_URL}" -o "${RUNNER_TEMP}/typst.tar.xz"
+
+        echo "Extracting typst executable to ${INSTALL_DIR}"
+        tar -xvJf "${RUNNER_TEMP}/typst.tar.xz" --wildcards "*/typst" --strip-components=1
+        mv typst "${INSTALL_DIR}"
+
+        ls -l "${INSTALL_DIR}"
+    - name: Verify typst
+      run: typst --version
+    - name: apt-deps
+      run: |
+        sudo apt install libsixel-bin -y
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
