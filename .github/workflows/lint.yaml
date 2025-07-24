@@ -1,0 +1,49 @@
+name: Lint
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Check PATH
+      run: |
+        echo "$PATH"
+    - name: apt-deps
+      run: |
+        sudo apt install pandoc libsixel-bin -y
+    - name: Verify pandoc
+      run: pandoc --version
+    - name: typst-dep
+      run: |
+        TYPST_VERSION="v0.13.1"
+        TYPST_ARCHIVE="typst-x86_64-unknown-linux-musl.tar.xz"
+        TYPST_URL="https://github.com/typst/typst/releases/download/${TYPST_VERSION}/${TYPST_ARCHIVE}"
+        INSTALL_DIR="${HOME}/.local/bin"
+        mkdir -p "${INSTALL_DIR}"
+
+        echo "Downloading Typst from ${TYPST_URL}"
+        # Use RUNNER_TEMP for temporary download location provided by GitHub Actions
+        curl -L "${TYPST_URL}" -o "${RUNNER_TEMP}/typst.tar.xz"
+
+        echo "Extracting typst executable to ${INSTALL_DIR}"
+        tar -xvJf "${RUNNER_TEMP}/typst.tar.xz" --wildcards "*/typst" --strip-components=1
+        mv typst "${INSTALL_DIR}"
+
+        ls -l "${INSTALL_DIR}"
+    - name: Verify typst
+      run: typst --version
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
