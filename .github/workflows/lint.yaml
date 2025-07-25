@@ -1,0 +1,58 @@
+name: Lint
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      LOCAL_BIN_DIR: "/home/runner/.local/bin"
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download and Extract Pandoc
+      uses: robinraju/release-downloader@v1.12
+      with:
+        repository: jgm/pandoc
+        tag: 3.7.0.2
+        fileName: pandoc-3.7.0.2-linux-amd64.tar.gz
+        out-file-path: ${{ runner.temp }}
+        extract: true
+    - name: Download Typst
+      uses: robinraju/release-downloader@v1.12
+      with:
+        repository: typst/typst
+        tag: v0.13.1
+        fileName: typst-x86_64-unknown-linux-musl.tar.xz
+        out-file-path: ${{ runner.temp }}
+        extract: false
+    - name: Install pandoc and typst to local bin
+      run: |
+        mkdir -p "${LOCAL_BIN_DIR}"
+
+        mv "${RUNNER_TEMP}/pandoc-3.7.0.2/bin/pandoc" "${LOCAL_BIN_DIR}"
+
+        # Can't `extract: true` on typst, since it uses .xz
+        # which is not supported in release-downloader as of v1.12
+        tar -xvJf "${RUNNER_TEMP}/typst-x86_64-unknown-linux-musl.tar.xz" --strip-components=1 --wildcards '*/typst'
+        mv typst "${LOCAL_BIN_DIR}"
+    - name: Install libsixel-bin
+      run: sudo apt install libsixel-bin -y
+
+    - name: Verify pandoc
+      run: pandoc --version
+    - name: Verify typst
+      run: typst --version
+    - name: Verify img2sixel
+      run: img2sixel --version
+
+    - name: Build
+      run: cargo build
+    - name: Run tests
+      run: cargo test
