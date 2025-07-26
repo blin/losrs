@@ -51,3 +51,9 @@ Things that are known to NOT work:
 
 * Rendering references
 * Rendering LaTeX code that can not be converted to Typst
+* If multiple cards with the same prompt are on the same page,
+  when reviewing any of the cards
+  the metadata will be updated for one of the cards,
+  but not necessarily the one that was due for review.
+  This is a consequence of not tracking the position of cards
+  in the page, and updating code matching on prompt.
