@@ -57,3 +57,8 @@ Things that are known to NOT work:
   but not necessarily the one that was due for review.
   This is a consequence of not tracking the position of cards
   in the page, and updating code matching on prompt.
+* Cards with cloze deletions do not have a three stage review
+  (show prompt, show response with cloze block hidden,
+  show response with cloze block shown),
+  and instead have a normal two stage review
+  (show prompt, show response).
