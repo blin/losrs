@@ -19,6 +19,17 @@ use crate::types::CardMetadata;
 use crate::types::FSRSMeta;
 use crate::types::SRSMeta;
 
+impl From<&ReviewResponse> for Rating {
+    fn from(value: &ReviewResponse) -> Self {
+        match *value {
+            ReviewResponse::LittleEffort => Rating::Easy,
+            ReviewResponse::SomeEffort => Rating::Good,
+            ReviewResponse::MuchEffort => Rating::Hard,
+            ReviewResponse::NoRecall => Rating::Again,
+        }
+    }
+}
+
 fn compute_next_fsrs_meta(
     srs_meta: &SRSMeta,
     resp: &ReviewResponse,
@@ -27,8 +38,7 @@ fn compute_next_fsrs_meta(
     let fsrs_params = rs_fsrs::Parameters { enable_short_term: false, ..Default::default() };
     let fsrs = FSRS::new(fsrs_params);
 
-    let rating = if *resp == ReviewResponse::Forgot { Rating::Again } else { Rating::Good };
-    let next = fsrs.next(srs_meta.fsrs_meta.clone(), reviewed_at.into(), rating);
+    let next = fsrs.next(srs_meta.fsrs_meta.clone(), reviewed_at.into(), resp.into());
     next.card
 }
 
