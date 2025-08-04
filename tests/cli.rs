@@ -416,8 +416,9 @@ fn expect_review_interaction(p: &mut PtySession, remembered: bool) -> Result<()>
     p.send(" ")?;
     p.flush()?;
 
-    p.exp_string("Remembered?")?;
-    p.send(if remembered { "y" } else { "n" })?;
+    p.exp_string("How much effort did recall require?")?;
+    p.exp_string("1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall")?;
+    p.send(if remembered { "2" } else { "4" })?;
     p.flush()?;
 
     p.read_line()?; // for the process to exit

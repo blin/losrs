@@ -78,20 +78,33 @@ pub fn wait_for_anykey(action_description: &str) -> Result<()> {
 
 #[derive(Debug, PartialEq)]
 pub enum ReviewResponse {
-    Remembered,
-    Forgot,
+    LittleEffort,
+    SomeEffort,
+    MuchEffort,
+    NoRecall,
 }
 
 pub fn wait_for_review() -> Result<ReviewResponse> {
-    print!("\nRemembered? (y/N, {ESCAPE_INSTRUCTIONS})");
+    print!(
+        r#"
+How much effort did recall require?
+(1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall; {ESCAPE_INSTRUCTIONS})"#
+    );
     stdout().flush()?;
 
     let key_event = grab_key_event()?;
 
-    let response = match key_event.code {
-        KeyCode::Char('y') | KeyCode::Char('Y') => ReviewResponse::Remembered,
-        _ => ReviewResponse::Forgot,
-    };
+    let mut tries = 3;
 
-    Ok(response)
+    while tries > 0 {
+        match key_event.code {
+            KeyCode::Char('1') => return Ok(ReviewResponse::LittleEffort),
+            KeyCode::Char('2') => return Ok(ReviewResponse::SomeEffort),
+            KeyCode::Char('3') => return Ok(ReviewResponse::MuchEffort),
+            KeyCode::Char('4') => return Ok(ReviewResponse::NoRecall),
+            _ => tries -= 1,
+        };
+    }
+
+    Err(anyhow!("Did not receive expected answer, aborting"))
 }
