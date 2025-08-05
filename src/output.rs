@@ -23,6 +23,8 @@ pub enum OutputFormat {
     Typst,
     Sixel,
     Storage,
+    Kitty,
+    ITerm,
 }
 
 pub enum CardBodyParts {
@@ -41,6 +43,8 @@ fn show_card_inner(
         OutputFormat::Typst => format_card_typst(card, &mut result, card_body_parts)?,
         OutputFormat::Sixel => format_card_sixel(card, &mut result, card_body_parts)?,
         OutputFormat::Storage => format_card_storage(card, &mut result, card_body_parts)?,
+        OutputFormat::Kitty => show_card_kitty_or_iterm(card, card_body_parts)?,
+        OutputFormat::ITerm => show_card_kitty_or_iterm(card, card_body_parts)?,
     };
     std::io::stdout().write_all(&result)?;
     Ok(())
@@ -89,11 +93,7 @@ pub fn format_card_typst(
     Ok(())
 }
 
-pub fn format_card_sixel(
-    card: &Card,
-    mut writer: impl std::io::Write,
-    card_body_parts: &CardBodyParts,
-) -> Result<()> {
+fn card_to_png(card: &Card, card_body_parts: &CardBodyParts) -> Result<Vec<u8>> {
     let markdown = match card_body_parts {
         CardBodyParts::Prompt => card.body.prompt.clone(),
         CardBodyParts::All => format!("{}\n{}", card.body.prompt, card.body.response),
@@ -130,9 +130,44 @@ pub fn format_card_sixel(
     let png_buf = typst_to_png(typst, graph_root)
         .with_context(|| "failed to convert typst to png via typst cli".to_owned())?;
 
+    Ok(png_buf)
+}
+
+pub fn format_card_sixel(
+    card: &Card,
+    mut writer: impl std::io::Write,
+    card_body_parts: &CardBodyParts,
+) -> Result<()> {
+    let png_buf = card_to_png(card, card_body_parts)?;
+
     let sixel_buf = png_to_sixel(png_buf)
         .with_context(|| "failed to convert png to sixel via img2sixel cli".to_owned())?;
     writer.write_all(&sixel_buf)?;
+
+    Ok(())
+}
+
+pub fn show_card_kitty_or_iterm(card: &Card, card_body_parts: &CardBodyParts) -> Result<()> {
+    use image::ImageReader;
+    use std::io::Cursor;
+
+    let png_buf = card_to_png(card, card_body_parts)?;
+
+    let img = ImageReader::with_format(Cursor::new(png_buf), image::ImageFormat::Png).decode()?;
+
+    // TODO: figure out how to prevent image over-stretching.
+    // On a 1920x1080 screen a 1500x200 image gets stretched to the full width of the screen.
+    // To minimize this effect, we make the image the same width...
+    let conf = viuer::Config {
+        absolute_offset: false,
+        use_kitty: true,
+        use_iterm: true,
+        // TODO: figure out how to make sixel via viuer look as good as sixel via img2sixel
+        use_sixel: false,
+        ..Default::default()
+    };
+
+    viuer::print(&img, &conf).unwrap();
 
     Ok(())
 }
@@ -177,15 +212,40 @@ fn markdown_to_typst(markdown: String) -> Result<Typst> {
     Ok(Typst(stdout))
 }
 
-const TYPST_FRONTMATTER: &str = r##"#set page(width: 13cm, height: auto, margin: 10pt)
-#show quote: it => {
-  rect(
-    inset: (left: 12pt, rest: 8pt),
-    stroke: (left: 3pt + gray, rest: none),
-    it.body
-  )
+// At 96 PPI (Pixels Per Inch is the only pixel density option for typst),
+// 19.0in = 1824
+// 9.0in = 864
+// These dimensions are just about right to work in the environments that I am testing with
+//   1. Microsoft terminal with sixel on a 23 inch screen with 1920x1080 resolution
+//   2. Wezterm with iterm on a 23 inch screen with 1920x1080 resolution
+//   3. TODO: ghostty with kitty on macbook
+// TODO: make this configurable
+// Fun fact: "desktop publishing point" is exactly 1/72 of an inch. 30 pt ~= 0.415 inch
+fn build_typst_frontmatter(base_font_size_pt: u16, columns: u16, lines: u16, ppi: u16) -> String {
+    let base_font_size_pt = base_font_size_pt as f32;
+    let columns = (columns - 10) as f32;
+    let lines = (lines - 5) as f32;
+
+    let point_width = columns * (base_font_size_pt * 0.625);
+    let inch_width = point_width / 72.0;
+
+    let point_height = (lines * base_font_size_pt * 1.2);
+    let inch_height = point_height / 72.0;
+
+    let font_size = base_font_size_pt * 2.0;
+
+    let mut rv = String::new();
+    rv.push_str(&format!(
+        "#set page(width: {}in, height: {}in, margin: {}pt)\n",
+        inch_width, inch_height, font_size
+    ));
+    rv.push_str(&format!("#set text(size: {}pt)\n", font_size));
+    rv.push_str(&format!(
+        "#show quote: it => {{ rect( inset: (left: 12pt, rest: 8pt), stroke: (left: 3pt + gray, rest: none), it.body) }}\n",
+    ));
+
+    rv
 }
-"##;
 
 fn typst_to_png(typst: Typst, graph_root: &Path) -> Result<Vec<u8>> {
     // typst_file needs to be in graph_root to support root relative references to assets,
@@ -195,14 +255,16 @@ fn typst_to_png(typst: Typst, graph_root: &Path) -> Result<Vec<u8>> {
     // like `![](../assets/image_1666695381725_0.png)`
     //
     // TODO: find or file an issue
+    let typst_frontmatter = build_typst_frontmatter(12, 188, 52, 96);
+    println!("{}", typst_frontmatter);
     let mut typst_file = NamedTempFile::new_in(graph_root)?;
-    typst_file.write_all(TYPST_FRONTMATTER.as_bytes())?;
+    typst_file.write_all(typst_frontmatter.as_bytes())?;
     typst_file.write_all(typst.to_string().as_bytes())?;
 
     let mut png_file = NamedTempFile::new()?;
     let output = process::Command::new("typst")
         .arg("compile")
-        .arg("--ppi=300")
+        .arg("--ppi=96")
         .arg("--format=png")
         .arg(typst_file.path())
         .arg(png_file.path())
