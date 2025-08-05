@@ -4,8 +4,8 @@ info:
   program: logseq-srs
   args:
     - review
-    - /tmp/.tmpfMEdS8/page.md
-    - "--at=2025-09-01T00:00:00Z"
+    - /tmp/.tmpEwM2qq
+    - "--at=2025-09-01T15:04:05.123456789Z"
     - "--seed=0"
   page_lines:
     - "- Not card"
@@ -29,8 +29,8 @@ info:
     - "- Not card"
     - ""
   interaction_meta:
-    expected type of interaction: "review first card, then nope out"
     first card with given seed: "What is Gregg Simplified for \"M\" (description)?"
+    expected type of interaction: "review first card, then nope out"
 ---
 - Not card
 - Alphabet forward cards
@@ -43,12 +43,12 @@ info:
     card-last-score:: 1
     - forward short stroke
   - What is Gregg Simplified for "M" (description)? #card
-    card-last-interval:: 119
+    card-last-interval:: 120
     card-repeats:: 5
     card-ease-factor:: 2.5
-    card-next-schedule:: 2025-12-29T00:00:00.000Z
-    card-last-reviewed:: 2025-09-01T00:00:00.000Z
+    card-next-schedule:: 2025-12-30T15:04:05.123Z
+    card-last-reviewed:: 2025-09-01T15:04:05.123Z
     card-last-score:: 5
-    card-fsrs-metadata:: {"due":"2025-12-29T00:00:00Z","stability":118.75114444246826,"difficulty":4.9598188419861655,"elapsed_days":58,"scheduled_days":119,"reps":5,"lapses":0,"state":"Review","last_review":"2025-09-01T00:00:00Z"}
+    card-fsrs-metadata:: {"due":"2025-12-30T15:04:05.123Z","stability":120.037,"difficulty":4.96,"elapsed_days":59,"scheduled_days":120,"reps":5,"lapses":0,"state":"Review","last_review":"2025-09-01T15:04:05.123Z"}
     - forward long stroke
 - Not card
