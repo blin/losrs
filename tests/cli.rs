@@ -201,10 +201,10 @@ test_card_output!(
   card-last-interval:: 9.0
   card-repeats:: 7
   card-ease-factor:: 3.1
-  card-next-schedule:: 2025-12-01T00:00:00Z
-  card-last-reviewed:: 2025-11-22T00:00:00Z
+  card-next-schedule:: 2025-12-01T15:04:05.123456789Z
+  card-last-reviewed:: 2025-11-22T15:04:05.123456789Z
   card-last-score:: 5
-  card-fsrs-metadata:: {"due":"2025-12-01T00:00:00Z","stability":8.774341658142419,"difficulty":7.040172161986166,"elapsed_days":245,"scheduled_days":9,"reps":7,"lapses":1,"state":"Review","last_review":"2025-11-22T00:00:00Z"}
+  card-fsrs-metadata:: {"due":"2025-12-01T15:04:05.123456789Z","stability":8.774341658142419,"difficulty":7.040172161986166,"elapsed_days":245,"scheduled_days":9,"reps":7,"lapses":1,"state":"Review","last_review":"2025-11-22T15:04:05.123456789Z"}
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#
@@ -498,7 +498,7 @@ macro_rules! test_card_review {
 
 test_card_review!(
     review_remembered_yes,
-    vec!["--at=2025-11-22T00:00:00Z"],
+    vec!["--at=2025-11-22T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
@@ -519,7 +519,7 @@ test_card_review!(
 
 test_card_review!(
     review_remembered_no,
-    vec!["--at=2025-11-22T00:00:00Z"],
+    vec!["--at=2025-11-22T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
@@ -540,7 +540,7 @@ test_card_review!(
 
 test_card_review!(
     review_card_without_meta_remembered_yes,
-    vec!["--at=2025-11-22T00:00:00Z"],
+    vec!["--at=2025-11-22T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   - Set of points in a 3 dimensional space that are equidistant from a center point.
@@ -555,7 +555,7 @@ test_card_review!(
 
 test_card_review!(
     review_card_without_meta_remembered_no,
-    vec!["--at=2025-11-22T00:00:00Z"],
+    vec!["--at=2025-11-22T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   - Set of points in a 3 dimensional space that are equidistant from a center point.
@@ -570,10 +570,10 @@ test_card_review!(
 
 test_card_review!(
     review_card_second_remembered_no,
-    vec!["--at=2025-11-23T00:00:00Z"],
+    vec!["--at=2025-11-23T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
-  card-fsrs-metadata:: {"due":"2025-11-23T00:00:00Z","stability":0.4072,"difficulty":7.2102,"elapsed_days":0,"scheduled_days":1,"reps":1,"lapses":0,"state":"Review","last_review":"2025-11-22T00:00:00Z"}
+  card-fsrs-metadata:: {"due":"2025-11-23T15:04:05.123456789Z","stability":0.4072,"difficulty":7.2102,"elapsed_days":0,"scheduled_days":1,"reps":1,"lapses":0,"state":"Review","last_review":"2025-11-22T15:04:05.123456789Z"}
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
@@ -588,7 +588,7 @@ test_card_output!(review_help, "review", vec!["--help"], vec![""]);
 
 test_card_review!(
     review_card_not_ready,
-    vec!["--at=2024-01-01T00:00:00Z"],
+    vec!["--at=2024-01-01T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
@@ -606,7 +606,7 @@ test_card_review!(
 
 test_card_review!(
     review_card_seed_0,
-    vec!["--at=2025-09-01T00:00:00Z", "--seed=0"],
+    vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=0"],
     r#"- Not card
 - Alphabet forward cards
   - What is Gregg Simplified for "N" (description)? #card
@@ -646,7 +646,7 @@ test_card_review!(
 
 test_card_review!(
     review_card_seed_100,
-    vec!["--at=2025-09-01T00:00:00Z", "--seed=100"],
+    vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=100"],
     r#"- Not card
 - Alphabet forward cards
   - What is Gregg Simplified for "N" (description)? #card
@@ -686,7 +686,7 @@ test_card_review!(
 
 #[test]
 fn newline_writeback_on_review() -> Result<()> {
-    let args = vec!["--at=2025-11-22T00:00:00Z"];
+    let args = vec!["--at=2025-11-22T15:04:05.123456789Z"];
     let page = r#"- What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6

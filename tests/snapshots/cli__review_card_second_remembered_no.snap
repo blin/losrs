@@ -4,12 +4,12 @@ info:
   program: logseq-srs
   args:
     - review
-    - /tmp/.tmpIxFtZN/page.md
-    - "--at=2025-11-23T00:00:00Z"
+    - /tmp/.tmpRxw3SI
+    - "--at=2025-11-23T15:04:05.123456789Z"
   page_lines:
     - "- Not card"
     - "- What is a sphere? #card"
-    - "  card-fsrs-metadata:: {\"due\":\"2025-11-23T00:00:00Z\",\"stability\":0.4072,\"difficulty\":7.2102,\"elapsed_days\":0,\"scheduled_days\":1,\"reps\":1,\"lapses\":0,\"state\":\"Review\",\"last_review\":\"2025-11-22T00:00:00Z\"}"
+    - "  card-fsrs-metadata:: {\"due\":\"2025-11-23T15:04:05.123456789Z\",\"stability\":0.4072,\"difficulty\":7.2102,\"elapsed_days\":0,\"scheduled_days\":1,\"reps\":1,\"lapses\":0,\"state\":\"Review\",\"last_review\":\"2025-11-22T15:04:05.123456789Z\"}"
     - "  - Set of points in a 3 dimensional space that are equidistant from a center point."
     - "- Not card"
     - ""
@@ -22,9 +22,9 @@ info:
   card-last-interval:: 1
   card-repeats:: 2
   card-ease-factor:: 2.5
-  card-next-schedule:: 2025-11-24T00:00:00.000Z
-  card-last-reviewed:: 2025-11-23T00:00:00.000Z
+  card-next-schedule:: 2025-11-24T15:04:05.123Z
+  card-last-reviewed:: 2025-11-23T15:04:05.123Z
   card-last-score:: 5
-  card-fsrs-metadata:: {"due":"2025-11-24T00:00:00Z","stability":0.27491830347692675,"difficulty":9.198653481986167,"elapsed_days":1,"scheduled_days":1,"reps":2,"lapses":1,"state":"Review","last_review":"2025-11-23T00:00:00Z"}
+  card-fsrs-metadata:: {"due":"2025-11-24T15:04:05.123Z","stability":0.275,"difficulty":9.199,"elapsed_days":1,"scheduled_days":1,"reps":2,"lapses":1,"state":"Review","last_review":"2025-11-23T15:04:05.123Z"}
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
