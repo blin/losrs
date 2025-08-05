@@ -4,8 +4,8 @@ info:
   program: logseq-srs
   args:
     - review
-    - /tmp/.tmpaNlMYy/page.md
-    - "--at=2025-11-22T00:00:00Z"
+    - /tmp/.tmpDp1ChA
+    - "--at=2025-11-22T15:04:05.123456789Z"
   page_lines:
     - "- Not card"
     - "- What is a sphere? #card"
@@ -21,9 +21,9 @@ info:
   card-last-interval:: 3
   card-repeats:: 1
   card-ease-factor:: 2.5
-  card-next-schedule:: 2025-11-25T00:00:00.000Z
-  card-last-reviewed:: 2025-11-22T00:00:00.000Z
+  card-next-schedule:: 2025-11-25T15:04:05.123Z
+  card-last-reviewed:: 2025-11-22T15:04:05.123Z
   card-last-score:: 5
-  card-fsrs-metadata:: {"due":"2025-11-25T00:00:00Z","stability":3.1262,"difficulty":5.314577829570867,"elapsed_days":0,"scheduled_days":3,"reps":1,"lapses":0,"state":"Review","last_review":"2025-11-22T00:00:00Z"}
+  card-fsrs-metadata:: {"due":"2025-11-25T15:04:05.123Z","stability":3.126,"difficulty":5.315,"elapsed_days":0,"scheduled_days":3,"reps":1,"lapses":0,"state":"Review","last_review":"2025-11-22T15:04:05.123Z"}
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
