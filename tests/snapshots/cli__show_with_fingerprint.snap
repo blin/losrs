@@ -1,7 +1,7 @@
 ---
 source: tests/cli.rs
 info:
-  program: logseq-srs
+  program: losrs
   args:
     - show
     - /tmp/.tmpwWmS3K

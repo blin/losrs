@@ -1,6 +1,6 @@
-# logseq-srs
+# losrs
 
-*logseq-srs* lets you review Spaced Repetition System (SRS) cards created in
+*losrs* lets you review Spaced Repetition System (SRS) cards created in
 [Logseq](https://github.com/logseq/logseq) in the terminal.
 
 This project was created as a workaround for
@@ -13,12 +13,12 @@ TODO: asciicinema a review session.
 
 ## Prerequisites
 
-logseq-srs works with a very narrow subset of Logseq features,
+losrs works with a very narrow subset of Logseq features,
 at the very least you need to ensure that:
-Logseq graph root where you plan to use logseq-srs is configured with
+Logseq graph root where you plan to use losrs is configured with
 `:export/bullet-indentation :two-spaces` .
 
-To render images in your cards you can use logseq-srs with `--format=sixel`.
+To render images in your cards you can use losrs with `--format=sixel`.
 
 That format requires:
 
