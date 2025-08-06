@@ -38,22 +38,22 @@ jobs:
         run: |
           mkdir release/
           cp {LICENSE.md,README.md} release/
-          cp target/${{ matrix.config.TARGET }}/release/logseq-srs release/
-          mv release/ logseq-srs-${{ env.RELEASE_VERSION }}/
+          cp target/${{ matrix.config.TARGET }}/release/losrs release/
+          mv release/ losrs-${{ env.RELEASE_VERSION }}/
 
       - name: Create release artifacts
         shell: bash
         run: |
-          tar -czvf logseq-srs-${{ env.RELEASE_VERSION }}-${{ matrix.config.TARGET }}.tar.gz \
-            logseq-srs-${{ env.RELEASE_VERSION }}/
-          shasum -a 512 logseq-srs-${{ env.RELEASE_VERSION }}-${{ matrix.config.TARGET }}.tar.gz \
-            > logseq-srs-${{ env.RELEASE_VERSION }}-${{ matrix.config.TARGET }}.tar.gz.sha512
+          tar -czvf losrs-${{ env.RELEASE_VERSION }}-${{ matrix.config.TARGET }}.tar.gz \
+            losrs-${{ env.RELEASE_VERSION }}/
+          shasum -a 512 losrs-${{ env.RELEASE_VERSION }}-${{ matrix.config.TARGET }}.tar.gz \
+            > losrs-${{ env.RELEASE_VERSION }}-${{ matrix.config.TARGET }}.tar.gz.sha512
 
       - name: Upload the release
         uses: svenstaro/upload-release-action@e2a63377780a8bacc68dcac9b0979ee20ad5a791
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: logseq-srs-${{ env.RELEASE_VERSION }}-${{ matrix.config.TARGET }}.*
+          file: losrs-${{ env.RELEASE_VERSION }}-${{ matrix.config.TARGET }}.*
           file_glob: true
           overwrite: true
           release_name: ${{ env.RELEASE_VERSION }}
