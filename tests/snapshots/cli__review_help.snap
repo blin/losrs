@@ -1,7 +1,7 @@
 ---
 source: tests/cli.rs
 info:
-  program: logseq-srs
+  program: losrs
   args:
     - review
     - /tmp/.tmpn3PhEY
@@ -14,7 +14,7 @@ exit_code: 0
 ----- stdout -----
 review cards
 
-Usage: logseq-srs review [OPTIONS] <PATH> [PROMPT_FINGERPRINT]
+Usage: losrs review [OPTIONS] <PATH> [PROMPT_FINGERPRINT]
 
 Arguments:
   <PATH>                The path to the file to read

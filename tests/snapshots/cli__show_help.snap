@@ -1,7 +1,7 @@
 ---
 source: tests/cli.rs
 info:
-  program: logseq-srs
+  program: losrs
   args:
     - show
     - /tmp/.tmpLCDrYm
@@ -14,7 +14,7 @@ exit_code: 0
 ----- stdout -----
 print cards
 
-Usage: logseq-srs show [OPTIONS] <PATH> [PROMPT_FINGERPRINT]
+Usage: losrs show [OPTIONS] <PATH> [PROMPT_FINGERPRINT]
 
 Arguments:
   <PATH>                The path to the file to read

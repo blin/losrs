@@ -67,7 +67,7 @@ fn construct_graph_root(pages: &[&str]) -> Result<tempfile::TempDir> {
 }
 
 fn construct_command(subcommand: &str, graph_root: &Path, args: &[&str]) -> Command {
-    let mut cmd = Command::new(get_cargo_bin("logseq-srs"));
+    let mut cmd = Command::new(get_cargo_bin("losrs"));
     cmd.arg(subcommand).arg(graph_root).args(args);
     cmd
 }
