@@ -12,6 +12,8 @@ use chrono::Utc;
 use serde::Serialize;
 use tempfile::NamedTempFile;
 
+use crate::terminal::TerminalSettings;
+use crate::terminal::grab_terminal_settings;
 use crate::types::Card;
 use crate::types::CardMetadata;
 use crate::types::FSRSMeta;
@@ -23,6 +25,8 @@ pub enum OutputFormat {
     Typst,
     Sixel,
     Storage,
+    Kitty,
+    ITerm,
 }
 
 pub enum CardBodyParts {
@@ -41,6 +45,8 @@ fn show_card_inner(
         OutputFormat::Typst => format_card_typst(card, &mut result, card_body_parts)?,
         OutputFormat::Sixel => format_card_sixel(card, &mut result, card_body_parts)?,
         OutputFormat::Storage => format_card_storage(card, &mut result, card_body_parts)?,
+        OutputFormat::Kitty => show_card_kitty_or_iterm(card, card_body_parts)?,
+        OutputFormat::ITerm => show_card_kitty_or_iterm(card, card_body_parts)?,
     };
     std::io::stdout().write_all(&result)?;
     Ok(())
@@ -89,11 +95,7 @@ pub fn format_card_typst(
     Ok(())
 }
 
-pub fn format_card_sixel(
-    card: &Card,
-    mut writer: impl std::io::Write,
-    card_body_parts: &CardBodyParts,
-) -> Result<()> {
+fn card_to_png(card: &Card, card_body_parts: &CardBodyParts) -> Result<Vec<u8>> {
     let markdown = match card_body_parts {
         CardBodyParts::Prompt => card.body.prompt.clone(),
         CardBodyParts::All => format!("{}\n{}", card.body.prompt, card.body.response),
@@ -130,9 +132,41 @@ pub fn format_card_sixel(
     let png_buf = typst_to_png(typst, graph_root)
         .with_context(|| "failed to convert typst to png via typst cli".to_owned())?;
 
+    Ok(png_buf)
+}
+
+pub fn format_card_sixel(
+    card: &Card,
+    mut writer: impl std::io::Write,
+    card_body_parts: &CardBodyParts,
+) -> Result<()> {
+    let png_buf = card_to_png(card, card_body_parts)?;
+
     let sixel_buf = png_to_sixel(png_buf)
         .with_context(|| "failed to convert png to sixel via img2sixel cli".to_owned())?;
     writer.write_all(&sixel_buf)?;
+
+    Ok(())
+}
+
+pub fn show_card_kitty_or_iterm(card: &Card, card_body_parts: &CardBodyParts) -> Result<()> {
+    use image::ImageReader;
+    use std::io::Cursor;
+
+    let png_buf = card_to_png(card, card_body_parts)?;
+
+    let img = ImageReader::with_format(Cursor::new(png_buf), image::ImageFormat::Png).decode()?;
+
+    let conf = viuer::Config {
+        absolute_offset: false,
+        use_kitty: true,
+        use_iterm: true,
+        // TODO: figure out how to make sixel via viuer look as good as sixel via img2sixel
+        // use_sixel: false,
+        ..Default::default()
+    };
+
+    viuer::print(&img, &conf).unwrap();
 
     Ok(())
 }
@@ -177,15 +211,58 @@ fn markdown_to_typst(markdown: String) -> Result<Typst> {
     Ok(Typst(stdout))
 }
 
-const TYPST_FRONTMATTER: &str = r##"#set page(width: 13cm, height: auto, margin: 10pt)
-#show quote: it => {
-  rect(
-    inset: (left: 12pt, rest: 8pt),
-    stroke: (left: 3pt + gray, rest: none),
-    it.body
-  )
+// The 0.625 ratio is better suited for monospace fonts, but we use it regardless.
+const FONT_HEIGHT_TO_WIDTH_SCALING: f32 = 0.625;
+// Fun fact: "desktop publishing point" is exactly 1/72 of an inch.
+const POINTS_PER_INCH: f32 = 72.0;
+// Microsoft terminal configures line height as a multiple of font size.
+// TODO: make this configurable or auto-detect
+const LINE_HEIGHT_SCALING: f32 = 1.2;
+
+fn build_typst_frontmatter(ts: &TerminalSettings) -> String {
+    // Convert early to avoid sprinkling conversions later
+    let base_font_size_pt = ts.base_font_size_pt as f32;
+    let columns = (ts.columns) as f32;
+    // The output during aborted review is:
+    //
+    // Reviewing [...]
+    // <card-image>
+    // How much effort [...]
+    // [...] Esc to nope out
+    // Error: Immediate nope out requested
+    // <terminal-prompt>
+    //
+    // For a total of 5 lines
+    let lines = (ts.lines - 5) as f32;
+    let base_ppi = 96.0;
+    let ppi = ts.ppi;
+    let ui_scaling = ppi / base_ppi;
+
+    let width_pt = columns * (base_font_size_pt * FONT_HEIGHT_TO_WIDTH_SCALING);
+    let width_in = width_pt / POINTS_PER_INCH;
+    let width_scaled_in = width_in * ui_scaling;
+
+    let height_pt = lines * base_font_size_pt * LINE_HEIGHT_SCALING;
+    let height_in = height_pt / POINTS_PER_INCH;
+    let height_scaled_in = height_in * ui_scaling;
+
+    let font_size_pt = base_font_size_pt * 2.0;
+    let font_size_scaled_pt = font_size_pt * ui_scaling;
+
+    // TODO: if there is no image, use height: auto
+    let mut rv = String::new();
+    rv.push_str(&format!(
+        "#set page(width: {}in, height: {}in, margin: {}pt)\n",
+        width_scaled_in, height_scaled_in, font_size_scaled_pt,
+    ));
+    rv.push_str(&format!("#set text(size: {}pt)\n", font_size_scaled_pt));
+    rv.push_str(&format!(
+        "#show quote: it => {{ rect( inset: (left: {}pt, rest: {}pt), stroke: (left: {}pt + gray, rest: none), it.body) }}\n",
+        font_size_scaled_pt, (font_size_scaled_pt/2.0), (font_size_scaled_pt/4.0)
+    ));
+
+    rv
 }
-"##;
 
 fn typst_to_png(typst: Typst, graph_root: &Path) -> Result<Vec<u8>> {
     // typst_file needs to be in graph_root to support root relative references to assets,
@@ -195,14 +272,16 @@ fn typst_to_png(typst: Typst, graph_root: &Path) -> Result<Vec<u8>> {
     // like `![](../assets/image_1666695381725_0.png)`
     //
     // TODO: find or file an issue
+    let terminal_settings = grab_terminal_settings();
+    let typst_frontmatter = build_typst_frontmatter(&terminal_settings);
     let mut typst_file = NamedTempFile::new_in(graph_root)?;
-    typst_file.write_all(TYPST_FRONTMATTER.as_bytes())?;
+    typst_file.write_all(typst_frontmatter.as_bytes())?;
     typst_file.write_all(typst.to_string().as_bytes())?;
 
     let mut png_file = NamedTempFile::new()?;
     let output = process::Command::new("typst")
         .arg("compile")
-        .arg("--ppi=300")
+        .arg(format!("--ppi={}", terminal_settings.ppi))
         .arg("--format=png")
         .arg(typst_file.path())
         .arg(png_file.path())

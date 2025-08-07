@@ -60,6 +60,8 @@ enum OutputFormatArg {
     Typst,
     Sixel,
     Storage,
+    Kitty,
+    ITerm,
 }
 
 impl From<&OutputFormatArg> for OutputFormat {
@@ -69,6 +71,8 @@ impl From<&OutputFormatArg> for OutputFormat {
             OutputFormatArg::Typst => OutputFormat::Typst,
             OutputFormatArg::Sixel => OutputFormat::Sixel,
             OutputFormatArg::Storage => OutputFormat::Storage,
+            OutputFormatArg::Kitty => OutputFormat::Kitty,
+            OutputFormatArg::ITerm => OutputFormat::ITerm,
         }
     }
 }
@@ -98,6 +102,9 @@ enum Commands {
             value_enum
         )]
         format: OutputFormatArg,
+
+        #[arg(long, default_value_t = 96.0)]
+        ppi: f32,
 
         /// RFC3999 timestamp to use as the time of the review.
         /// Affects both selection and updating.
@@ -176,6 +183,7 @@ fn main() -> Result<()> {
         Commands::Review {
             card_ref: CardRefArgs { path, prompt_fingerprint },
             format,
+            ppi,
             at,
             seed,
         } => {
@@ -183,6 +191,10 @@ fn main() -> Result<()> {
                 Some(at) => at,
                 None => chrono::offset::Utc::now().fixed_offset(),
             };
+            {
+                let mut ppi_guard = crate::terminal::PPI.lock().unwrap();
+                *ppi_guard = ppi;
+            }
 
             act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
                 card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= at);

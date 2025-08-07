@@ -1,5 +1,7 @@
 use std::io::Write;
 use std::io::stdout;
+use std::sync::LazyLock;
+use std::sync::Mutex;
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -107,4 +109,26 @@ How much effort did recall require?
     }
 
     Err(anyhow!("Did not receive expected answer, aborting"))
+}
+
+pub struct TerminalSettings {
+    pub columns: u16,
+    pub lines: u16,
+    pub base_font_size_pt: u16,
+    pub ppi: f32,
+}
+
+const DEFAULT_TERM_SIZE: (u16, u16) = (80, 24);
+pub static PPI: LazyLock<Mutex<f32>> = LazyLock::new(|| Mutex::new(96.0));
+
+pub fn grab_terminal_settings() -> TerminalSettings {
+    let (columns, lines) = match crossterm::terminal::size() {
+        Ok(s) => s,
+        Err(_) => DEFAULT_TERM_SIZE,
+    };
+    // TODO: configure or auto-detect
+    let base_font_size_pt = 12;
+    let ppi_guard = PPI.lock().unwrap();
+    let ppi = *ppi_guard;
+    TerminalSettings { columns, lines, base_font_size_pt, ppi }
 }
