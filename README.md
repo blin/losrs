@@ -18,9 +18,9 @@ at the very least you need to ensure that:
 Logseq graph root where you plan to use losrs is configured with
 `:export/bullet-indentation :two-spaces` .
 
-To render images in your cards you can use losrs with `--format=sixel`.
 
-That format requires:
+To render images in your cards you can use losrs with
+`--format=(sixel|kitty|i-term)`.
 
 1. Your terminal to support the sixel format.
    See [Are We Sixel Yet?](https://www.arewesixelyet.com/).
@@ -34,10 +34,10 @@ That format requires:
 Rendering pipeline is basically:
 
 ```text
-markdown -> typst -> png -> sixel
+markdown -> typst -> png -> image-protocol
 ```
 
-And was borrowed from [presenterm](https://github.com/mfontanini/presenterm).
+And was inspired by [presenterm](https://github.com/mfontanini/presenterm).
 The
 [reasons presenterm has for converting LaTeX to Typst](https://github.com/mfontanini/presenterm/blob/master/docs/src/features/code/latex.md?plain=1#L30)
 do not apply to this project, but I found it easy to work with this pipeline
@@ -62,3 +62,6 @@ Things that are known to NOT work:
   show response with cloze block shown),
   and instead have a normal two stage review
   (show prompt, show response).
+* When rendering via an image based format,
+  a card must fit in 900 pixels by height,
+  you will likely need to specify a `{height=20%}` or similar.
