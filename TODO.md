@@ -2,7 +2,7 @@
 
 - [x] 4 basic FSRS answers
 - [x] Make `review --at` work on exact match
-- [ ] Support kitty/iterm image protocols
+- [x] Support kitty/iterm image protocols
 - [ ] Additional answer for "move this to the next day's session"
 - [ ] Add an `upcoming-reviews` command with a `--within=DURATION` flag
 - [ ] Config file

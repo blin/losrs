@@ -108,3 +108,24 @@ How much effort did recall require?
 
     Err(anyhow!("Did not receive expected answer, aborting"))
 }
+
+// fn build_typst_frontmatter(base_font_size_pt: u16, columns: u16, lines: u16, ui_scaling: f32) -> String {
+pub struct TerminalSettings {
+    pub columns: u16,
+    pub lines: u16,
+    pub base_font_size_pt: u16,
+    pub ui_scaling: f32,
+}
+
+const DEFAULT_TERM_SIZE: (u16, u16) = (80, 24);
+
+pub fn grab_terminal_settings() -> TerminalSettings {
+    let (columns, lines) = match crossterm::terminal::size() {
+        Ok(s) => s,
+        Err(_) => DEFAULT_TERM_SIZE,
+    };
+    // TODO: configure or auto-detect
+    let base_font_size_pt = 12;
+    let ui_scaling = 1.0;
+    TerminalSettings { columns, lines, base_font_size_pt, ui_scaling }
+}
