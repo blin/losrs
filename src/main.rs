@@ -11,6 +11,7 @@ use clap::Subcommand;
 use clap::ValueEnum;
 
 use crate::output::OutputFormat;
+use crate::output::OutputSettings;
 use crate::output::show_card;
 use crate::storage::extract_card_by_ref;
 use crate::storage::extract_card_metadatas;
@@ -27,9 +28,6 @@ pub mod types;
 /// Work with Spaced Repetition Cards (SRS) embedded in Logseq pages
 #[derive(Parser)]
 struct Cli {
-    #[command(flatten)]
-    verbosity: clap_verbosity_flag::Verbosity,
-
     #[command(subcommand)]
     command: Commands,
 }
@@ -45,7 +43,7 @@ fn parse_datetime(src: &str) -> Result<DateTime<FixedOffset>> {
 
 #[derive(Args)]
 struct CardRefArgs {
-    /// The path to the file to read
+    /// The path to the page file or graph root directory
     path: PathBuf,
 
     /// Fingerprint of the card's prompt.
@@ -54,12 +52,52 @@ struct CardRefArgs {
     prompt_fingerprint: Option<Fingerprint>,
 }
 
+#[derive(Args)]
+struct OutputArgs {
+    #[arg(
+        long,
+        default_value_t = OutputFormatArg::Clean,
+        value_enum
+    )]
+    format: OutputFormatArg,
+
+    /// Pixel density in PPI (Pixels Per Inch).
+    ///
+    /// Used with image based formats.
+    #[arg(long, default_value_t = 96.0)]
+    ppi: f32,
+
+    /// "base" font size in points.
+    ///
+    /// Everything is scaled relative to this font size.
+    ///
+    /// It is best to set this to the same font size as your terminal font size.
+    ///
+    /// Used with image based formats.
+    #[arg(long, default_value_t = 12)]
+    base_font_size: i32,
+
+    /// Height of the line relative to the font size.
+    ///
+    /// Used for figuring out vertical size of the card.
+    ///
+    /// Some terminals allow scaling line height (and some scale by default),
+    /// this value needs to be known to calculate the right image size.
+    ///
+    /// It is best to set this to the same line height scaling
+    /// as your terminal line height scaling.
+    ///
+    /// Used with image based formats.
+    #[arg(long, default_value_t = 1.2)]
+    line_height_scaling: f32,
+}
+
 #[derive(Clone, ValueEnum)]
 enum OutputFormatArg {
     Clean,
     Typst,
-    Sixel,
     Storage,
+    Sixel,
 }
 
 impl From<&OutputFormatArg> for OutputFormat {
@@ -67,8 +105,19 @@ impl From<&OutputFormatArg> for OutputFormat {
         match value {
             OutputFormatArg::Clean => OutputFormat::Clean,
             OutputFormatArg::Typst => OutputFormat::Typst,
-            OutputFormatArg::Sixel => OutputFormat::Sixel,
             OutputFormatArg::Storage => OutputFormat::Storage,
+            OutputFormatArg::Sixel => OutputFormat::Sixel,
+        }
+    }
+}
+
+impl From<&OutputArgs> for OutputSettings {
+    fn from(o: &OutputArgs) -> Self {
+        OutputSettings {
+            format: (&o.format).into(),
+            ppi: o.ppi,
+            base_font_size_pt: o.base_font_size,
+            line_height_scaling: o.line_height_scaling,
         }
     }
 }
@@ -80,24 +129,16 @@ enum Commands {
         #[command(flatten)]
         card_ref: CardRefArgs,
 
-        #[arg(
-            long,
-            default_value_t = OutputFormatArg::Clean,
-            value_enum
-        )]
-        format: OutputFormatArg,
+        #[command(flatten)]
+        output_args: OutputArgs,
     },
     /// review cards
     Review {
         #[command(flatten)]
         card_ref: CardRefArgs,
 
-        #[arg(
-            long,
-            default_value_t = OutputFormatArg::Clean,
-            value_enum
-        )]
-        format: OutputFormatArg,
+        #[command(flatten)]
+        output_args: OutputArgs,
 
         /// RFC3999 timestamp to use as the time of the review.
         /// Affects both selection and updating.
@@ -153,13 +194,11 @@ fn shuffle_slice<T>(s: &mut [T], seed: u64) {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    env_logger::Builder::new().filter_level(cli.verbosity.into()).init();
 
     match cli.command {
-        Commands::Show { card_ref: CardRefArgs { path, prompt_fingerprint }, format } => {
+        Commands::Show { card_ref: CardRefArgs { path, prompt_fingerprint }, output_args } => {
             act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
                 for cm in card_metas {
-                    let format = (&format).into();
                     let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
                     format!(
                         "When extracting card with fingerprint {} from {}, card with prompt prefix: {}",
@@ -168,14 +207,14 @@ fn main() -> Result<()> {
                         cm.prompt_prefix
                     )
                 })?;
-                    show_card(&card, &format)?
+                    show_card(&card, &(&output_args).into())?
                 }
                 Ok(())
             })?;
         }
         Commands::Review {
             card_ref: CardRefArgs { path, prompt_fingerprint },
-            format,
+            output_args,
             at,
             seed,
         } => {
@@ -188,7 +227,7 @@ fn main() -> Result<()> {
                 card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= at);
                 shuffle_slice(card_metas, seed.unwrap_or_default());
                 for cm in card_metas {
-                    review::review_card(cm, (&format).into(), at)?
+                    review::review_card(cm, at, &(&output_args).into())?
                 }
                 Ok(())
             })?;
