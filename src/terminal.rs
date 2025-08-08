@@ -108,3 +108,13 @@ How much effort did recall require?
 
     Err(anyhow!("Did not receive expected answer, aborting"))
 }
+
+const DEFAULT_TERM_SIZE: (u16, u16) = (80, 24);
+
+// (columns, lines)
+pub fn grab_term_size() -> (u16, u16) {
+    match crossterm::terminal::size() {
+        Ok(s) => s,
+        Err(_) => DEFAULT_TERM_SIZE,
+    }
+}
