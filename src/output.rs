@@ -12,6 +12,7 @@ use chrono::Utc;
 use serde::Serialize;
 use tempfile::NamedTempFile;
 
+use crate::terminal::grab_term_size;
 use crate::types::Card;
 use crate::types::CardMetadata;
 use crate::types::FSRSMeta;
@@ -25,6 +26,14 @@ pub enum OutputFormat {
     Storage,
 }
 
+pub struct OutputSettings {
+    pub format: OutputFormat,
+
+    pub ppi: f32,
+
+    pub base_font_size_pt: i32,
+}
+
 pub enum CardBodyParts {
     Prompt,
     All,
@@ -32,26 +41,28 @@ pub enum CardBodyParts {
 
 fn show_card_inner(
     card: &Card,
-    format: &OutputFormat,
     card_body_parts: &CardBodyParts,
+    output_settings: &OutputSettings,
 ) -> Result<()> {
     let mut result = Vec::new();
-    match format {
+    match output_settings.format {
         OutputFormat::Clean => format_card_clean(card, &mut result, card_body_parts)?,
         OutputFormat::Typst => format_card_typst(card, &mut result, card_body_parts)?,
-        OutputFormat::Sixel => format_card_sixel(card, &mut result, card_body_parts)?,
+        OutputFormat::Sixel => {
+            format_card_sixel(card, &mut result, card_body_parts, output_settings)?
+        }
         OutputFormat::Storage => format_card_storage(card, &mut result, card_body_parts)?,
     };
     std::io::stdout().write_all(&result)?;
     Ok(())
 }
 
-pub fn show_card(card: &Card, format: &OutputFormat) -> Result<()> {
-    show_card_inner(card, format, &CardBodyParts::All)
+pub fn show_card(card: &Card, output_settings: &OutputSettings) -> Result<()> {
+    show_card_inner(card, &CardBodyParts::All, output_settings)
 }
 
-pub fn show_card_prompt(card: &Card, format: &OutputFormat) -> Result<()> {
-    show_card_inner(card, format, &CardBodyParts::Prompt)
+pub fn show_card_prompt(card: &Card, output_settings: &OutputSettings) -> Result<()> {
+    show_card_inner(card, &CardBodyParts::Prompt, output_settings)
 }
 
 pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
@@ -93,6 +104,7 @@ pub fn format_card_sixel(
     card: &Card,
     mut writer: impl std::io::Write,
     card_body_parts: &CardBodyParts,
+    output_settings: &OutputSettings,
 ) -> Result<()> {
     let markdown = match card_body_parts {
         CardBodyParts::Prompt => card.body.prompt.clone(),
@@ -127,7 +139,7 @@ pub fn format_card_sixel(
         page_path.display()
     ))?;
 
-    let png_buf = typst_to_png(typst, graph_root)
+    let png_buf = typst_to_png(typst, graph_root, output_settings)
         .with_context(|| "failed to convert typst to png via typst cli".to_owned())?;
 
     let sixel_buf = png_to_sixel(png_buf)
@@ -177,17 +189,67 @@ fn markdown_to_typst(markdown: String) -> Result<Typst> {
     Ok(Typst(stdout))
 }
 
-const TYPST_FRONTMATTER: &str = r##"#set page(width: 13cm, height: auto, margin: 10pt)
-#show quote: it => {
-  rect(
-    inset: (left: 12pt, rest: 8pt),
-    stroke: (left: 3pt + gray, rest: none),
-    it.body
-  )
-}
-"##;
+// The 0.625 ratio is better suited for monospace fonts, but we use it regardless.
+const FONT_HEIGHT_TO_WIDTH_SCALING: f32 = 0.625;
+// Fun fact: "desktop publishing point" is exactly 1/72 of an inch.
+const POINTS_PER_INCH: f32 = 72.0;
+// Microsoft terminal configures line height as a multiple of font size.
+// TODO: make this configurable or auto-detect
+const LINE_HEIGHT_SCALING: f32 = 1.2;
 
-fn typst_to_png(typst: Typst, graph_root: &Path) -> Result<Vec<u8>> {
+fn build_typst_frontmatter(
+    output_settings: &OutputSettings,
+    (lines, columns): (u16, u16),
+) -> String {
+    // Convert early to avoid sprinkling conversions later
+    let base_font_size_pt = output_settings.base_font_size_pt as f32;
+    let columns = (columns) as f32;
+    // The output during aborted review is:
+    //
+    // Reviewing [...]
+    // <card-image>
+    // How much effort [...]
+    // [...] Esc to nope out
+    // Error: Immediate nope out requested
+    // <terminal-prompt>
+    //
+    // For a total of 5 lines
+    let lines = (lines - 5) as f32;
+    let base_ppi = 96.0;
+    let ppi = output_settings.ppi;
+    let ui_scaling = ppi / base_ppi;
+
+    let width_pt = columns * (base_font_size_pt * FONT_HEIGHT_TO_WIDTH_SCALING);
+    let width_in = width_pt / POINTS_PER_INCH;
+    let width_scaled_in = width_in * ui_scaling;
+
+    let height_pt = lines * base_font_size_pt * LINE_HEIGHT_SCALING;
+    let height_in = height_pt / POINTS_PER_INCH;
+    let height_scaled_in = height_in * ui_scaling;
+
+    let font_size_pt = base_font_size_pt * 2.0;
+    let font_size_scaled_pt = font_size_pt * ui_scaling;
+
+    // TODO: if there is no image, use height: auto
+    let mut rv = String::new();
+    rv.push_str(&format!(
+        "#set page(width: {}in, height: {}in, margin: {}pt)\n",
+        width_scaled_in, height_scaled_in, font_size_scaled_pt,
+    ));
+    rv.push_str(&format!("#set text(size: {}pt)\n", font_size_scaled_pt));
+    rv.push_str(&format!(
+        "#show quote: it => {{ rect( inset: (left: {}pt, rest: {}pt), stroke: (left: {}pt + gray, rest: none), it.body) }}\n",
+        font_size_scaled_pt, (font_size_scaled_pt/2.0), (font_size_scaled_pt/4.0)
+    ));
+
+    rv
+}
+
+fn typst_to_png(
+    typst: Typst,
+    graph_root: &Path,
+    output_settings: &OutputSettings,
+) -> Result<Vec<u8>> {
     // typst_file needs to be in graph_root to support root relative references to assets,
     // like `![](assets/image_1666695381725_0.png)`
     //
@@ -195,14 +257,16 @@ fn typst_to_png(typst: Typst, graph_root: &Path) -> Result<Vec<u8>> {
     // like `![](../assets/image_1666695381725_0.png)`
     //
     // TODO: find or file an issue
+
+    let typst_frontmatter = build_typst_frontmatter(output_settings, grab_term_size());
     let mut typst_file = NamedTempFile::new_in(graph_root)?;
-    typst_file.write_all(TYPST_FRONTMATTER.as_bytes())?;
+    typst_file.write_all(typst_frontmatter.as_bytes())?;
     typst_file.write_all(typst.to_string().as_bytes())?;
 
     let mut png_file = NamedTempFile::new()?;
     let output = process::Command::new("typst")
         .arg("compile")
-        .arg("--ppi=300")
+        .arg(format!("--ppi={}", output_settings.ppi))
         .arg("--format=png")
         .arg(typst_file.path())
         .arg(png_file.path())
