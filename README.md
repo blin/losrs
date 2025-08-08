@@ -62,3 +62,7 @@ Things that are known to NOT work:
   show response with cloze block shown),
   and instead have a normal two stage review
   (show prompt, show response).
+* When rendering via an image based format,
+  a card must fit in the terminal window by height.
+  Specify a relative height like `{height=50%}` to ensure
+  images fit.

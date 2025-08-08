@@ -6,7 +6,7 @@ use chrono::FixedOffset;
 use rs_fsrs::FSRS;
 use rs_fsrs::Rating;
 
-use crate::output::OutputFormat;
+use crate::output::OutputSettings;
 use crate::output::show_card;
 use crate::output::show_card_prompt;
 use crate::storage::extract_card_by_ref;
@@ -55,8 +55,8 @@ fn compute_next_srs_meta(
 
 pub fn review_card(
     cm: &CardMetadata,
-    format: OutputFormat,
     reviewed_at: DateTime<FixedOffset>,
+    output_settings: &OutputSettings,
 ) -> Result<()> {
     let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
         format!(
@@ -80,7 +80,7 @@ pub fn review_card(
     // 2. Format card into buffer
     // 3. Complete progressbar
     // 4. Show the whole thing
-    show_card_prompt(&card, &format)?;
+    show_card_prompt(&card, output_settings)?;
 
     wait_for_anykey("show the answer")?;
 
@@ -91,7 +91,7 @@ pub fn review_card(
         cm.card_ref.source_path.display()
     );
 
-    show_card(&card, &format)?;
+    show_card(&card, output_settings)?;
 
     let review_response = wait_for_review()?;
     let next_srs_meta =

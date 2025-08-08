@@ -10,7 +10,6 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use chrono::DateTime;
-use log::warn;
 
 use markdown::ParseOptions;
 use markdown::mdast::Node;
@@ -74,7 +73,7 @@ fn find_card_list_items(file_raw: &str) -> Result<Vec<mdast::ListItem>> {
         [Node::Paragraph(_)] | [] => {
             // If it's just a paragraph, there are no cards.
             // If it's empty, there are no cards.
-            warn!("file did not contain a list");
+            print!("file did not contain a list");
             return Ok(vec![]);
         }
         [Node::Paragraph(_), Node::List(l)] => l,
@@ -259,7 +258,7 @@ fn extract_card<'a>(
     })
 }
 
-pub fn extract_card_metadatas(path: &Path) -> Result<Vec<CardMetadata>> {
+pub fn extract_card_metadatas<'a>(path: &'a Path) -> Result<Vec<CardMetadata<'a>>> {
     let file_raw = fs::read_to_string(path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
 
