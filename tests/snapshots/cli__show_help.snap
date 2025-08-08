@@ -4,7 +4,7 @@ info:
   program: losrs
   args:
     - show
-    - /tmp/.tmpLCDrYm
+    - /tmp/.tmpVwupTQ
     - "--help"
   page_lines:
     - - ""
@@ -22,8 +22,7 @@ Arguments:
 
 Options:
       --format <FORMAT>  [default: clean] [possible values: clean, typst, sixel, storage]
-  -v, --verbose...       Increase logging verbosity
-  -q, --quiet...         Decrease logging verbosity
+      --ppi <PPI>        Pixel density in PPI (Pixels Per Inch). Used with image based formats [default: 96]
   -h, --help             Print help
 
 ----- stderr -----

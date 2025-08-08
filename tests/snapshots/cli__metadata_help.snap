@@ -4,7 +4,7 @@ info:
   program: losrs
   args:
     - metadata
-    - /tmp/.tmp1eZeFU
+    - /tmp/.tmp1rqdCy
     - "--help"
   page_lines:
     - - ""
@@ -14,15 +14,13 @@ exit_code: 0
 ----- stdout -----
 prints metadata for cards
 
-Usage: losrs metadata [OPTIONS] <PATH> [PROMPT_FINGERPRINT]
+Usage: losrs metadata <PATH> [PROMPT_FINGERPRINT]
 
 Arguments:
   <PATH>                The path to the file to read
   [PROMPT_FINGERPRINT]  Fingerprint of the card's prompt. Use metadata command to find one
 
 Options:
-  -v, --verbose...  Increase logging verbosity
-  -q, --quiet...    Decrease logging verbosity
-  -h, --help        Print help
+  -h, --help  Print help
 
 ----- stderr -----

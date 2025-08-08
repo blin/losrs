@@ -108,3 +108,19 @@ How much effort did recall require?
 
     Err(anyhow!("Did not receive expected answer, aborting"))
 }
+
+pub struct TerminalSettings {
+    pub columns: u16,
+    pub lines: u16,
+    pub base_font_size_pt: u16,
+    pub ppi: f32,
+}
+
+const DEFAULT_TERM_SIZE: (u16, u16) = (80, 24);
+
+pub fn grab_term_size() -> (u16, u16) {
+    match crossterm::terminal::size() {
+        Ok(s) => s,
+        Err(_) => DEFAULT_TERM_SIZE,
+    }
+}
