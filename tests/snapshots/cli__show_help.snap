@@ -4,7 +4,7 @@ info:
   program: losrs
   args:
     - show
-    - /tmp/.tmpqUX4Eb
+    - /tmp/.tmpPNpoy7
     - "--help"
   page_lines:
     - - ""
@@ -26,7 +26,7 @@ Arguments:
 Options:
       --format <FORMAT>
           [default: clean]
-          [possible values: clean, typst, storage, sixel]
+          [possible values: clean, typst, storage, sixel, kitty, i-term]
 
       --ppi <PPI>
           Pixel density in PPI (Pixels Per Inch).
