@@ -98,6 +98,8 @@ enum OutputFormatArg {
     Typst,
     Storage,
     Sixel,
+    Kitty,
+    ITerm,
 }
 
 impl From<&OutputFormatArg> for OutputFormat {
@@ -107,6 +109,8 @@ impl From<&OutputFormatArg> for OutputFormat {
             OutputFormatArg::Typst => OutputFormat::Typst,
             OutputFormatArg::Storage => OutputFormat::Storage,
             OutputFormatArg::Sixel => OutputFormat::Sixel,
+            OutputFormatArg::Kitty => OutputFormat::Kitty,
+            OutputFormatArg::ITerm => OutputFormat::ITerm,
         }
     }
 }

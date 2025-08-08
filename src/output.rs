@@ -24,6 +24,8 @@ pub enum OutputFormat {
     Typst,
     Storage,
     Sixel,
+    Kitty,
+    ITerm,
 }
 
 pub struct OutputSettings {
@@ -51,6 +53,8 @@ fn show_card_inner(
         OutputFormat::Sixel => {
             format_card_sixel(card, &mut result, card_body_parts, output_settings)?
         }
+        OutputFormat::Kitty => show_card_kitty_or_iterm(card, card_body_parts, output_settings)?,
+        OutputFormat::ITerm => show_card_kitty_or_iterm(card, card_body_parts, output_settings)?,
     };
     std::io::stdout().write_all(&result)?;
     Ok(())
@@ -99,12 +103,11 @@ pub fn format_card_typst(
     Ok(())
 }
 
-pub fn format_card_sixel(
+fn card_to_png(
     card: &Card,
-    mut writer: impl std::io::Write,
     card_body_parts: &CardBodyParts,
     output_settings: &OutputSettings,
-) -> Result<()> {
+) -> Result<Vec<u8>> {
     let markdown = match card_body_parts {
         CardBodyParts::Prompt => card.body.prompt.clone(),
         CardBodyParts::All => format!("{}\n{}", card.body.prompt, card.body.response),
@@ -141,9 +144,45 @@ pub fn format_card_sixel(
     let png_buf = typst_to_png(typst, graph_root, output_settings)
         .with_context(|| "failed to convert typst to png via typst cli".to_owned())?;
 
+    Ok(png_buf)
+}
+
+pub fn format_card_sixel(
+    card: &Card,
+    mut writer: impl std::io::Write,
+    card_body_parts: &CardBodyParts,
+    output_settings: &OutputSettings,
+) -> Result<()> {
+    let png_buf = card_to_png(card, card_body_parts, output_settings)?;
     let sixel_buf = png_to_sixel(png_buf)
         .with_context(|| "failed to convert png to sixel via img2sixel cli".to_owned())?;
     writer.write_all(&sixel_buf)?;
+
+    Ok(())
+}
+
+pub fn show_card_kitty_or_iterm(
+    card: &Card,
+    card_body_parts: &CardBodyParts,
+    output_settings: &OutputSettings,
+) -> Result<()> {
+    use image::ImageReader;
+    use std::io::Cursor;
+
+    let png_buf = card_to_png(card, card_body_parts, output_settings)?;
+
+    let img = ImageReader::with_format(Cursor::new(png_buf), image::ImageFormat::Png).decode()?;
+
+    let conf = viuer::Config {
+        absolute_offset: false,
+        use_kitty: true,
+        use_iterm: true,
+        // TODO: figure out how to make sixel via viuer look as good as sixel via img2sixel
+        // use_sixel: false,
+        ..Default::default()
+    };
+
+    viuer::print(&img, &conf).unwrap();
 
     Ok(())
 }
