@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -16,6 +17,7 @@ use rexpect::session::spawn_command;
 pub struct Info {
     program: String,
     args: Vec<String>,
+    envs: HashMap<String, Option<String>>,
     page_lines: Vec<Vec<String>>,
 }
 
@@ -24,6 +26,12 @@ impl Info {
         Info {
             program: insta_cmd_describe_program(cmd.get_program()),
             args: cmd.get_args().map(|x| x.to_string_lossy().into_owned()).collect(),
+            envs: cmd
+                .get_envs()
+                .map(|(k, v)| {
+                    (k.to_string_lossy().into_owned(), v.map(|v| v.to_string_lossy().into_owned()))
+                })
+                .collect(),
             page_lines: pages
                 .iter()
                 .map(|p| p.split("\n").map(|s| s.to_owned()).collect())
@@ -66,22 +74,31 @@ fn construct_graph_root(pages: &[&str]) -> Result<tempfile::TempDir> {
     Ok(graph_root)
 }
 
-fn construct_command(subcommand: &str, graph_root: &Path, args: &[&str]) -> Command {
+fn construct_command<I, S>(args: I, envs: Vec<(&str, &str)>) -> Command
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
     let mut cmd = Command::new(get_cargo_bin("losrs"));
-    cmd.arg(subcommand).arg(graph_root).args(args);
+    cmd.args(args).envs(envs);
     cmd
 }
 
+fn fill_variables(args: Vec<&str>, graph_root: &Path) -> Vec<String> {
+    args.iter().map(|arg| arg.replace("$GRAPH_ROOT", graph_root.to_str().unwrap())).collect()
+}
+
 macro_rules! test_card_output {
-    ($name:ident, $subcommand:expr, $args:expr, $pages:expr ) => {
+    ($name:ident, $args:expr, $envs:expr, $pages:expr ) => {
         #[test]
         fn $name() -> Result<()> {
-            let subcommand: &str = $subcommand;
             let args: Vec<&str> = $args;
+            let envs: Vec<(&str,&str)> = $envs;
             let pages: Vec<&str> = $pages;
-
             let graph_root = construct_graph_root(&pages)?;
-            let mut cmd = construct_command(subcommand, graph_root.path(), &args);
+            let args: Vec<String> = fill_variables(args, graph_root.path());
+
+            let mut cmd = construct_command(args, envs);
 
             let output = cmd.output().unwrap();
 
@@ -100,12 +117,14 @@ macro_rules! test_card_output {
     };
 }
 
-test_card_output!(show_help, "show", vec!["--help"], vec![""]);
+test_card_output!(root_help, vec!["--help"], vec![], vec![""]);
+
+test_card_output!(show_help, vec!["show", "--help"], vec![], vec![""]);
 
 test_card_output!(
     show,
-    "show",
-    Vec::<&str>::new(),
+    vec!["show", "$GRAPH_ROOT",],
+    vec![],
     vec![
         r#"- Not card
 - What is a sphere? #card
@@ -123,8 +142,8 @@ test_card_output!(
 
 test_card_output!(
     show_format_clean,
-    "show",
-    vec!["--format=clean"],
+    vec!["show", "$GRAPH_ROOT", "--format=clean"],
+    vec![],
     vec![
         r#"- Not card
 - What is a sphere? #card
@@ -142,8 +161,8 @@ test_card_output!(
 
 test_card_output!(
     show_format_typst,
-    "show",
-    vec!["--format=typst"],
+    vec!["show", "$GRAPH_ROOT", "--format=typst"],
+    vec![],
     vec![
         r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
@@ -161,8 +180,8 @@ test_card_output!(
 
 test_card_output!(
     show_format_storage,
-    "show",
-    vec!["--format=storage"],
+    vec!["show", "$GRAPH_ROOT", "--format=storage"],
+    vec![],
     vec![
         r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
@@ -180,8 +199,8 @@ test_card_output!(
 
 test_card_output!(
     show_format_storage_card_without_metadata,
-    "show",
-    vec!["--format=storage"],
+    vec!["show", "$GRAPH_ROOT", "--format=storage"],
+    vec![],
     vec![
         r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
@@ -193,8 +212,8 @@ test_card_output!(
 
 test_card_output!(
     show_format_storage_card_with_fsrs_metadata,
-    "show",
-    vec!["--format=storage"],
+    vec!["show", "$GRAPH_ROOT", "--format=storage"],
+    vec![],
     vec![
         r#"- Not card
 - What is a sphere? #card
@@ -213,8 +232,8 @@ test_card_output!(
 
 test_card_output!(
     show_format_storage_card_with_reordered_metadata,
-    "show",
-    vec!["--format=storage"],
+    vec!["show", "$GRAPH_ROOT", "--format=storage"],
+    vec![],
     vec![
         r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
@@ -232,8 +251,8 @@ test_card_output!(
 
 test_card_output!(
     show_card_with_data_after_metadata,
-    "show",
-    Vec::<&str>::new(),
+    vec!["show", "$GRAPH_ROOT",],
+    vec![],
     vec![
         r#"- Not card
 - What is the relationship between angles $\\alpha$ and $\\gamma_{1}$ in the picture relative to the transversal?
@@ -253,8 +272,8 @@ test_card_output!(
 
 test_card_output!(
     show_card_with_unicode_prompt,
-    "show",
-    Vec::<&str>::new(),
+    vec!["show", "$GRAPH_ROOT",],
+    vec![],
     vec![
         r#"- Not card
 - Какова связь между углами $\\alpha$ и $\\gamma_{1}$ на изображении относительно секущей?
@@ -272,12 +291,12 @@ test_card_output!(
     ]
 );
 
-test_card_output!(metadata_help, "metadata", vec!["--help"], vec![""]);
+test_card_output!(metadata_help, vec!["metadata", "--help"], vec![], vec![""]);
 
 test_card_output!(
     metadata,
-    "metadata",
-    Vec::<&str>::new(),
+    vec!["metadata", "$GRAPH_ROOT"],
+    vec![],
     vec![
         r#"- Not card
 - What is a sphere? #card
@@ -295,8 +314,8 @@ test_card_output!(
 
 test_card_output!(
     show_with_fingerprint,
-    "show",
-    vec!["0xb9de554a02212aca"],
+    vec!["show", "$GRAPH_ROOT", "0xb9de554a02212aca"],
+    vec![],
     vec![
         r#"- Not card
 - What is a sphere? #card
@@ -322,8 +341,8 @@ test_card_output!(
 
 test_card_output!(
     show_multiple_page_files,
-    "show",
-    Vec::<&str>::new(),
+    vec!["show", "$GRAPH_ROOT",],
+    vec![],
     vec![
         r#"- Not card
 - What is the volume of a sphere (symbolic)? #card
@@ -352,8 +371,8 @@ test_card_output!(
 
 test_card_output!(
     show_card_is_deeply_nested,
-    "show",
-    Vec::<&str>::new(),
+    vec!["show", "$GRAPH_ROOT",],
+    vec![],
     vec![
         r#"- Not card
 - induction
@@ -373,8 +392,8 @@ test_card_output!(
 
 test_card_output!(
     show_format_storage_card_is_deeply_nested,
-    "show",
-    vec!["--format=storage"],
+    vec!["show", "$GRAPH_ROOT", "--format=storage"],
+    vec![],
     vec![
         r#"- Not card
 - induction
@@ -459,13 +478,15 @@ macro_rules! test_card_review {
     ($name:ident, $args:expr, $page:expr, $f:expr, $interaction_meta:expr ) => {
         #[test]
         fn $name() -> Result<()> {
-            let args: Vec<&str> = $args;
+            let mut args: Vec<&str> = vec!["review", "$GRAPH_ROOT"];
+            args.extend_from_slice(&($args));
             let page: &str = $page;
             let f: fn(&mut PtySession) -> Result<()> = $f;
             let interaction_meta: HashMap<String, String> = $interaction_meta;
 
             let graph_root = construct_graph_root(&[page])?;
-            let cmd = construct_command("review", graph_root.path(), &args);
+            let args = fill_variables(args, graph_root.path());
+            let cmd = construct_command(&args, vec![]);
 
             let cmd_info = &ReviewInfo::new(&cmd, page, interaction_meta);
             let mut p = spawn_command(cmd, Some(1000))?;
@@ -584,7 +605,7 @@ test_card_review!(
     ])
 );
 
-test_card_output!(review_help, "review", vec!["--help"], vec![""]);
+test_card_output!(review_help, vec!["review", "--help"], vec![], vec![""]);
 
 test_card_review!(
     review_card_not_ready,
@@ -686,7 +707,7 @@ test_card_review!(
 
 #[test]
 fn newline_writeback_on_review() -> Result<()> {
-    let args = vec!["--at=2025-11-22T15:04:05.123456789Z"];
+    let args = vec!["review", "$GRAPH_ROOT", "--at=2025-11-22T15:04:05.123456789Z"];
     let page = r#"- What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -697,7 +718,8 @@ fn newline_writeback_on_review() -> Result<()> {
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card"#;
     let graph_root = construct_graph_root(&[page])?;
-    let cmd = construct_command("review", graph_root.path(), &args);
+    let args = fill_variables(args, graph_root.path());
+    let cmd = construct_command(&args, vec![]);
 
     let mut p = spawn_command(cmd, Some(1000))?;
 
