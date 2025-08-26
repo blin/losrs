@@ -4,8 +4,9 @@ info:
   program: losrs
   args:
     - show
-    - /tmp/.tmp7cEQO3
-    - "--format=storage"
+    - /tmp/.tmp5Edr9D
+  envs:
+    LOSRS__OUTPUT__FORMAT: storage
   page_lines:
     - - "- Not card"
       - "- induction"
