@@ -84,8 +84,20 @@ where
     cmd
 }
 
-fn fill_variables(args: Vec<&str>, graph_root: &Path) -> Vec<String> {
-    args.iter().map(|arg| arg.replace("$GRAPH_ROOT", graph_root.to_str().unwrap())).collect()
+fn build_args(args: &[&str], pages: &[&str]) -> Result<(tempfile::TempDir, Vec<String>)> {
+    let graph_root = construct_graph_root(pages)?;
+
+    let mut final_args: Vec<String> = Vec::new();
+
+    let config_path = graph_root.path().join("losrs.toml");
+    std::fs::File::create(&config_path)?;
+    final_args.push(format!("--config={}", config_path.display()));
+
+    let updated_args =
+        args.iter().map(|arg| arg.replace("$GRAPH_ROOT", graph_root.path().to_str().unwrap()));
+    final_args.extend(updated_args);
+
+    Ok((graph_root, final_args))
 }
 
 macro_rules! test_card_output {
@@ -95,8 +107,8 @@ macro_rules! test_card_output {
             let args: Vec<&str> = $args;
             let envs: Vec<(&str,&str)> = $envs;
             let pages: Vec<&str> = $pages;
-            let graph_root = construct_graph_root(&pages)?;
-            let args: Vec<String> = fill_variables(args, graph_root.path());
+
+            let (_graph_root, args) = build_args(&args, &pages)?;
 
             let mut cmd = construct_command(args, envs);
 
@@ -106,7 +118,7 @@ macro_rules! test_card_output {
                 omit_expression => true,
                 info => &Info::new(&cmd, pages),
                 filters => vec![
-                    (r"/tmp/.tmp\w+/", "[TMP_DIR]/"),
+                    (r"/[^ ]+/.tmp\w+/", "[TMP_DIR]/"),
                 ],
             },
             {
@@ -484,8 +496,7 @@ macro_rules! test_card_review {
             let f: fn(&mut PtySession) -> Result<()> = $f;
             let interaction_meta: HashMap<String, String> = $interaction_meta;
 
-            let graph_root = construct_graph_root(&[page])?;
-            let args = fill_variables(args, graph_root.path());
+            let (_graph_root, args) = build_args(&args, &[page])?;
             let cmd = construct_command(&args, vec![]);
 
             let cmd_info = &ReviewInfo::new(&cmd, page, interaction_meta);
@@ -500,7 +511,7 @@ macro_rules! test_card_review {
                 _ => return Err(anyhow!("expected process to exit, got {:?}", status)),
             }
 
-            let file_raw = read_solitary_page(graph_root.path())?;
+            let file_raw = read_solitary_page(_graph_root.path())?;
             insta::with_settings!({
                 omit_expression => true,
                 info => cmd_info,
@@ -717,8 +728,7 @@ fn newline_writeback_on_review() -> Result<()> {
   card-last-score:: 5
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card"#;
-    let graph_root = construct_graph_root(&[page])?;
-    let args = fill_variables(args, graph_root.path());
+    let (_graph_root, args) = build_args(&args, &[page])?;
     let cmd = construct_command(&args, vec![]);
 
     let mut p = spawn_command(cmd, Some(1000))?;
@@ -731,7 +741,7 @@ fn newline_writeback_on_review() -> Result<()> {
         _ => return Err(anyhow!("expected process to exit, got {:?}", status)),
     }
 
-    let page_raw = read_solitary_page(graph_root.path())?;
+    let page_raw = read_solitary_page(_graph_root.path())?;
     let leading_newline_count = page_raw.chars().take_while(|&c| c == '\n').count();
     let trailing_newline_count = page_raw.chars().rev().take_while(|&c| c == '\n').count();
 

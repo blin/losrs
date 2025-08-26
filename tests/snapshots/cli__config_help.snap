@@ -3,6 +3,7 @@ source: tests/cli.rs
 info:
   program: losrs
   args:
+    - "--config=/tmp/.tmpr9sHub/losrs.toml"
     - config
     - "--help"
   envs: {}
@@ -18,6 +19,7 @@ Usage: losrs config <COMMAND>
 
 Commands:
   show  Show the merged configuration
+  path  Show the path to the default configuration file
   help  Print this message or the help of the given subcommand(s)
 
 Options:
@@ -25,12 +27,13 @@ Options:
 
 # Configuration
 
-Losrs can be configured using ENV variables
-(and in the future with a config file).
+Losrs can be configured via a configuration file
+(you can find the location of the file via `losrs config path`)
+and via ENV variables.
 
 See below for possible settings.
 
-## Output
+## output
 
 ### format
 
