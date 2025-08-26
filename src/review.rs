@@ -6,9 +6,9 @@ use chrono::FixedOffset;
 use rs_fsrs::FSRS;
 use rs_fsrs::Rating;
 
-use crate::output::OutputSettings;
 use crate::output::show_card;
 use crate::output::show_card_prompt;
+use crate::settings::OutputSettings;
 use crate::storage::extract_card_by_ref;
 use crate::storage::rewrite_card_srs_meta;
 use crate::terminal::ReviewResponse;
