@@ -9,6 +9,7 @@ anyhow = "1.0.98"
 chrono = "0.4.41"
 clap = { version = "4.5.40", features = ["derive"] }
 clap-verbosity-flag = "3.0.3"
+config = { version = "0.15.14", default-features = false }
 crossterm = "0.29.0"
 image = { version = "0.25.6", default-features = false, features = ["png"] }
 markdown = "1.0.0"
