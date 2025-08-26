@@ -12,28 +12,13 @@ use chrono::Utc;
 use serde::Serialize;
 use tempfile::NamedTempFile;
 
+use crate::settings::OutputFormat;
+use crate::settings::OutputSettings;
 use crate::terminal::grab_term_size;
 use crate::types::Card;
 use crate::types::CardMetadata;
 use crate::types::FSRSMeta;
 use crate::types::SRSMeta;
-
-#[derive(Clone)]
-pub enum OutputFormat {
-    Clean,
-    Typst,
-    Storage,
-    Sixel,
-    Kitty,
-    ITerm,
-}
-
-pub struct OutputSettings {
-    pub format: OutputFormat,
-    pub ppi: f32,
-    pub base_font_size_pt: i32,
-    pub line_height_scaling: f32,
-}
 
 pub enum CardBodyParts {
     Prompt,
@@ -237,7 +222,7 @@ fn build_typst_frontmatter(
     (columns, lines): (u16, u16),
 ) -> String {
     // Convert early to avoid sprinkling conversions later
-    let base_font_size_pt = output_settings.base_font_size_pt as f32;
+    let base_font_size_pt = output_settings.base_font_size as f32;
     let columns = columns as f32;
     // The output during aborted review is:
     //
