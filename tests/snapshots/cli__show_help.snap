@@ -3,6 +3,7 @@ source: tests/cli.rs
 info:
   program: losrs
   args:
+    - "--config=/tmp/.tmpa3d2ZU/losrs.toml"
     - show
     - "--help"
   envs: {}
@@ -18,7 +19,7 @@ Usage: losrs show <PATH> [PROMPT_FINGERPRINT]
 
 Arguments:
   <PATH>                The path to the page file or graph root directory
-  [PROMPT_FINGERPRINT]  Fingerprint of the card's prompt. Use metadata command to find one
+  [PROMPT_FINGERPRINT]  Fingerprint of the card's prompt. Use `metadata` command to find one
 
 Options:
   -h, --help  Print help
