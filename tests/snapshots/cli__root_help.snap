@@ -3,6 +3,7 @@ source: tests/cli.rs
 info:
   program: losrs
   args:
+    - "--config=/tmp/.tmp7MQkH5/losrs.toml"
     - "--help"
   envs: {}
   page_lines:
@@ -13,7 +14,7 @@ exit_code: 0
 ----- stdout -----
 Work with Spaced Repetition System (SRS) cards embedded in Logseq pages
 
-Usage: losrs <COMMAND>
+Usage: losrs [OPTIONS] <COMMAND>
 
 Commands:
   show          Print cards
@@ -24,6 +25,7 @@ Commands:
   help          Print this message or the help of the given subcommand(s)
 
 Options:
-  -h, --help  Print help
+      --config <CONFIG>  Override path to the config file. Use `config path` command to find the default path
+  -h, --help             Print help
 
 ----- stderr -----
