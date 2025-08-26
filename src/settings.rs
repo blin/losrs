@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
@@ -8,17 +10,39 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn new() -> Result<Self> {
+    pub fn new(config_path: Option<PathBuf>) -> Result<Self> {
         use config::Config;
+
+        // We only ensure file exists if the user has not supplied the path.
+        let config_path = match config_path {
+            Some(path) => path,
+            None => Self::ensure_config_path()?,
+        };
 
         let settings = Config::builder()
             .add_source(Config::try_from(&Settings::default())?)
+            .add_source(config::File::from(config_path))
             .add_source(config::Environment::with_prefix("LOSRS").separator("__"))
             .build()
             .unwrap();
 
         let config: Settings = settings.try_deserialize()?;
         Ok(config)
+    }
+
+    pub fn ensure_config_path() -> Result<PathBuf> {
+        let p = Self::get_config_path()?;
+        if !p.exists() {
+            confy::store_path(&p, Settings::default())?;
+        }
+
+        Ok(p)
+    }
+
+    pub fn get_config_path() -> Result<PathBuf> {
+        let p = confy::get_configuration_file_path("losrs", "losrs")?;
+
+        Ok(p)
     }
 }
 

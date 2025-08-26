@@ -29,6 +29,11 @@ pub mod types;
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+
+    /// Override path to the config file.
+    /// Use `config path` command to find the default path.
+    #[arg(long)]
+    config: Option<PathBuf>,
 }
 
 fn parse_hex(src: &str) -> Result<Fingerprint> {
@@ -46,7 +51,7 @@ struct CardRefArgs {
     path: PathBuf,
 
     /// Fingerprint of the card's prompt.
-    /// Use metadata command to find one.
+    /// Use `metadata` command to find one.
     #[arg(value_parser = parse_hex)]
     prompt_fingerprint: Option<Fingerprint>,
 }
@@ -94,6 +99,8 @@ enum Commands {
 enum ConfigCommands {
     /// Show the merged configuration
     Show,
+    /// Show the path to the default configuration file
+    Path,
 }
 
 fn act_on_card_ref<F>(path: &Path, prompt_fingerprint: Option<Fingerprint>, f: F) -> Result<()>
@@ -129,7 +136,7 @@ fn shuffle_slice<T>(s: &mut [T], seed: u64) {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let settings = Settings::new()?;
+    let settings = Settings::new(cli.config)?;
 
     match cli.command {
         Commands::Show { card_ref: CardRefArgs { path, prompt_fingerprint } } => {
@@ -186,6 +193,9 @@ fn main() -> Result<()> {
         Commands::Config { command } => match command {
             ConfigCommands::Show => {
                 println!("{}", serde_json::to_string_pretty(&settings)?)
+            }
+            ConfigCommands::Path => {
+                println!("{}", Settings::get_config_path()?.display());
             }
         },
     }

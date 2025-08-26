@@ -84,8 +84,11 @@ where
     cmd
 }
 
-fn fill_variables(args: Vec<&str>, graph_root: &Path) -> Vec<String> {
-    args.iter().map(|arg| arg.replace("$GRAPH_ROOT", graph_root.to_str().unwrap())).collect()
+fn fill_variables(args: Vec<&str>, graph_root: &Path, config_path: &Path) -> Vec<String> {
+    ([format!("--config={}", config_path.display())].into_iter().chain(
+        args.into_iter().map(|arg| arg.replace("$GRAPH_ROOT", graph_root.to_str().unwrap())),
+    ))
+    .collect()
 }
 
 macro_rules! test_card_output {
@@ -96,7 +99,10 @@ macro_rules! test_card_output {
             let envs: Vec<(&str,&str)> = $envs;
             let pages: Vec<&str> = $pages;
             let graph_root = construct_graph_root(&pages)?;
-            let args: Vec<String> = fill_variables(args, graph_root.path());
+            let config_root = tempfile::TempDir::new()?;
+            let config_path = config_root.path().join("losrs.toml");
+            std::fs::File::create(&config_path)?;
+            let args = fill_variables(args, graph_root.path(), &config_path);
 
             let mut cmd = construct_command(args, envs);
 
@@ -485,7 +491,10 @@ macro_rules! test_card_review {
             let interaction_meta: HashMap<String, String> = $interaction_meta;
 
             let graph_root = construct_graph_root(&[page])?;
-            let args = fill_variables(args, graph_root.path());
+            let config_root = tempfile::TempDir::new()?;
+            let config_path = config_root.path().join("losrs.toml");
+            std::fs::File::create(&config_path)?;
+            let args = fill_variables(args, graph_root.path(), &config_path);
             let cmd = construct_command(&args, vec![]);
 
             let cmd_info = &ReviewInfo::new(&cmd, page, interaction_meta);
@@ -718,7 +727,10 @@ fn newline_writeback_on_review() -> Result<()> {
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card"#;
     let graph_root = construct_graph_root(&[page])?;
-    let args = fill_variables(args, graph_root.path());
+    let config_root = tempfile::TempDir::new()?;
+    let config_path = config_root.path().join("losrs.toml");
+    std::fs::File::create(&config_path)?;
+    let args = fill_variables(args, graph_root.path(), &config_path);
     let cmd = construct_command(&args, vec![]);
 
     let mut p = spawn_command(cmd, Some(1000))?;
