@@ -1,0 +1,24 @@
+---
+source: tests/cli.rs
+info:
+  program: losrs
+  args:
+    - config
+    - show
+  envs: {}
+  page_lines:
+    - - ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+{
+  "output": {
+    "format": "clean",
+    "ppi": 96.0,
+    "base_font_size": 12,
+    "line_height_scaling": 1.2
+  }
+}
+
+----- stderr -----

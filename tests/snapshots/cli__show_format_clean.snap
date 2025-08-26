@@ -4,8 +4,9 @@ info:
   program: losrs
   args:
     - show
-    - /tmp/.tmpcAbIkc
-    - "--format=clean"
+    - /tmp/.tmpYYvvoG
+  envs:
+    LOSRS__OUTPUT__FORMAT: clean
   page_lines:
     - - "- Not card"
       - "- What is a sphere? #card"
