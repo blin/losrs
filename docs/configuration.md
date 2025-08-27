@@ -1,11 +1,12 @@
 # Configuration
 
-Losrs can be configured using ENV variables
-(and in the future with a config file).
+Losrs can be configured via a configuration file
+(you can find the location of the file via `losrs config path`)
+and via ENV variables.
 
 See below for possible settings.
 
-## Output
+## output
 
 ### format
 
