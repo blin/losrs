@@ -1,0 +1,4 @@
+- What is a lens in the context of geometry? #card
+  - Shape bound by two [[Circular arc]]s
+- How does a symmetric lens look (visualize)? #card
+  - ![](assets/upload_wikimedia_org_wikipedia_commons_thumb_a_a7_Vesica_piscis_circles_svg_960px_Vesica_piscis_circles_svg.png){height=50%}

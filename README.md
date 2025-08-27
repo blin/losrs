@@ -9,7 +9,7 @@ and the fault
 [only being fixed in the database version of Logseq](https://github.com/logseq/logseq/pull/11540)
 to the exclusion of plain file version of Logseq.
 
-TODO: asciicinema a review session.
+![](demo/demo.gif)
 
 ## Prerequisites
 
