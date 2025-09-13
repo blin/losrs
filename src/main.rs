@@ -181,7 +181,15 @@ fn main() -> Result<()> {
                 card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= up_to);
                 shuffle_slice(card_metas, seed.unwrap_or_default());
                 for cm in card_metas {
-                    review::review_card(cm, at, &output_settings)?
+                    match review::review_card(cm, at, &output_settings) {
+                        Ok(_) => {}
+                        Err(err) => match err.downcast_ref::<terminal::NopeOutError>() {
+                            Some(terminal::NopeOutError {}) => {
+                                break;
+                            }
+                            None => Err(err)?,
+                        },
+                    }
                 }
                 Ok(())
             })?;
