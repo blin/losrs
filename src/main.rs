@@ -142,6 +142,7 @@ fn main() -> Result<()> {
         Commands::Show { card_ref: CardRefArgs { path, prompt_fingerprint } } => {
             let output_settings = settings.output;
             act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
+                card_metas.sort_by(|a, b| a.card_ref.source_path.cmp(b.card_ref.source_path));
                 for cm in card_metas {
                     let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
                         format!(
