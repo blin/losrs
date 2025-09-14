@@ -531,7 +531,7 @@ macro_rules! test_card_review {
 
 test_card_review!(
     review_remembered_yes,
-    vec!["--at=2025-11-22T15:04:05.123456789Z"],
+    vec!["--at=2025-11-22T15:04:05.123456789Z", "--up-to=2025-11-22T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
@@ -552,7 +552,7 @@ test_card_review!(
 
 test_card_review!(
     review_remembered_no,
-    vec!["--at=2025-11-22T15:04:05.123456789Z"],
+    vec!["--at=2025-11-22T15:04:05.123456789Z", "--up-to=2025-11-22T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
@@ -573,7 +573,7 @@ test_card_review!(
 
 test_card_review!(
     review_card_without_meta_remembered_yes,
-    vec!["--at=2025-11-22T15:04:05.123456789Z"],
+    vec!["--at=2025-11-22T15:04:05.123456789Z", "--up-to=2025-11-22T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   - Set of points in a 3 dimensional space that are equidistant from a center point.
@@ -588,7 +588,7 @@ test_card_review!(
 
 test_card_review!(
     review_card_without_meta_remembered_no,
-    vec!["--at=2025-11-22T15:04:05.123456789Z"],
+    vec!["--at=2025-11-22T15:04:05.123456789Z", "--up-to=2025-11-22T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   - Set of points in a 3 dimensional space that are equidistant from a center point.
@@ -603,7 +603,7 @@ test_card_review!(
 
 test_card_review!(
     review_card_second_remembered_no,
-    vec!["--at=2025-11-23T15:04:05.123456789Z"],
+    vec!["--at=2025-11-23T15:04:05.123456789Z", "--up-to=2025-11-23T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   card-fsrs-metadata:: {"due":"2025-11-23T15:04:05.123456789Z","stability":0.4072,"difficulty":7.2102,"elapsed_days":0,"scheduled_days":1,"reps":1,"lapses":0,"state":"Review","last_review":"2025-11-22T15:04:05.123456789Z"}
@@ -621,7 +621,7 @@ test_card_output!(review_help, vec!["review", "--help"], vec![], vec![""]);
 
 test_card_review!(
     review_card_not_ready,
-    vec!["--at=2024-01-01T15:04:05.123456789Z"],
+    vec!["--at=2024-01-01T15:04:05.123456789Z", "--up-to=2024-01-01T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
@@ -639,7 +639,11 @@ test_card_review!(
 
 test_card_review!(
     review_card_seed_0,
-    vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=0"],
+    vec![
+        "--at=2025-09-01T15:04:05.123456789Z",
+        "--up-to=2025-09-01T15:04:05.123456789Z",
+        "--seed=0"
+    ],
     r#"- Not card
 - Alphabet forward cards
   - What is Gregg Simplified for "N" (description)? #card
@@ -679,7 +683,11 @@ test_card_review!(
 
 test_card_review!(
     review_card_seed_100,
-    vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=100"],
+    vec![
+        "--at=2025-09-01T15:04:05.123456789Z",
+        "--up-to=2025-09-01T15:04:05.123456789Z",
+        "--seed=100"
+    ],
     r#"- Not card
 - Alphabet forward cards
   - What is Gregg Simplified for "N" (description)? #card
@@ -719,7 +727,12 @@ test_card_review!(
 
 #[test]
 fn newline_writeback_on_review() -> Result<()> {
-    let args = vec!["review", "$GRAPH_ROOT", "--at=2025-11-22T15:04:05.123456789Z"];
+    let args = vec![
+        "review",
+        "$GRAPH_ROOT",
+        "--at=2025-11-22T15:04:05.123456789Z",
+        "--up-to=2025-11-22T15:04:05.123456789Z",
+    ];
     let page = r#"- What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
