@@ -164,15 +164,20 @@ fn main() -> Result<()> {
                 None => chrono::offset::Utc::now().fixed_offset(),
             };
 
-            act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
+            match act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
                 card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= at);
                 shuffle_slice(card_metas, seed.unwrap_or_default());
                 for cm in card_metas {
                     review::review_card(cm, at, &output_settings)?
                 }
                 Ok(())
-            })?;
-            println!("Reviewed all cards, huzzah!");
+            }) {
+                Ok(_) => println!("Reviewed all cards, huzzah!"),
+                Err(err) => match err.downcast_ref::<terminal::NopeOutError>() {
+                    Some(e) => println!("{}", e),
+                    None => Err(err)?,
+                },
+            }
         }
         Commands::Metadata { card_ref: CardRefArgs { path, prompt_fingerprint } } => {
             act_on_card_ref(&path, prompt_fingerprint, |card_metas| {

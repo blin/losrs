@@ -47,6 +47,16 @@ impl Drop for RawModeGuard {
     }
 }
 
+#[derive(Debug)]
+pub struct NopeOutError();
+
+impl std::fmt::Display for NopeOutError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Immediate nope out requested")
+    }
+}
+impl std::error::Error for NopeOutError {}
+
 fn grab_key_event() -> Result<KeyEvent> {
     let event: Event;
     {
@@ -58,11 +68,7 @@ fn grab_key_event() -> Result<KeyEvent> {
         Event::Key(key_event) => key_event,
         _ => return Err(anyhow!("expected a key event, got {:?}", event)),
     };
-    if is_escape_request(&key_event) {
-        Err(anyhow!("Immediate nope out requested"))
-    } else {
-        Ok(key_event)
-    }
+    if is_escape_request(&key_event) { Err((NopeOutError {}).into()) } else { Ok(key_event) }
 }
 
 const ESCAPE_INSTRUCTIONS: &str = "Ctrl+C or Esc to nope out";
