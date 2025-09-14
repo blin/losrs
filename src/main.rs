@@ -69,9 +69,14 @@ enum Commands {
         card_ref: CardRefArgs,
 
         /// RFC3999 timestamp to use as the time of the review.
-        /// Affects both selection and updating.
+        /// Affects updating.
         #[arg(long, value_parser = parse_datetime, value_name = "TIMESTAMP")]
         at: Option<DateTime<FixedOffset>>,
+
+        /// RFC3999 timestamp to use as an upper bound on due time.
+        /// Affects selection.
+        #[arg(long, value_parser = parse_datetime, value_name = "TIMESTAMP")]
+        up_to: Option<DateTime<FixedOffset>>,
 
         /// Seed used for shuffling cards ready to be reviewed
         #[arg(long)]
@@ -157,15 +162,23 @@ fn main() -> Result<()> {
                 Ok(())
             })?;
         }
-        Commands::Review { card_ref: CardRefArgs { path, prompt_fingerprint }, at, seed } => {
+        Commands::Review {
+            card_ref: CardRefArgs { path, prompt_fingerprint },
+            at,
+            up_to,
+            seed,
+        } => {
             let output_settings = settings.output;
-            let at = match at {
-                Some(at) => at,
-                None => chrono::offset::Utc::now().fixed_offset(),
+            let now = chrono::offset::Utc::now().fixed_offset();
+            let (at, up_to) = match (at, up_to) {
+                (None, None) => (now, now),
+                (None, Some(up_to)) => (now, up_to),
+                (Some(at), None) => (at, at),
+                (Some(at), Some(up_to)) => (at, up_to),
             };
 
             match act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
-                card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= at);
+                card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= up_to);
                 shuffle_slice(card_metas, seed.unwrap_or_default());
                 for cm in card_metas {
                     review::review_card(cm, at, &output_settings)?
