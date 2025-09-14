@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::anyhow;
 use chrono::DateTime;
 use chrono::FixedOffset;
 use clap::Args;
@@ -69,9 +70,14 @@ enum Commands {
         card_ref: CardRefArgs,
 
         /// RFC3999 timestamp to use as the time of the review.
-        /// Affects both selection and updating.
+        /// Affects updating.
         #[arg(long, value_parser = parse_datetime, value_name = "TIMESTAMP")]
         at: Option<DateTime<FixedOffset>>,
+
+        /// RFC3999 timestamp to use as an upper bound on due time.
+        /// Affects selection.
+        #[arg(long, value_parser = parse_datetime, value_name = "TIMESTAMP")]
+        up_to: Option<DateTime<FixedOffset>>,
 
         /// Seed used for shuffling cards ready to be reviewed
         #[arg(long)]
@@ -157,15 +163,32 @@ fn main() -> Result<()> {
                 Ok(())
             })?;
         }
-        Commands::Review { card_ref: CardRefArgs { path, prompt_fingerprint }, at, seed } => {
+        Commands::Review {
+            card_ref: CardRefArgs { path, prompt_fingerprint },
+            at,
+            seed,
+            up_to,
+        } => {
             let output_settings = settings.output;
+            let now = chrono::offset::Utc::now().fixed_offset();
             let at = match at {
                 Some(at) => at,
-                None => chrono::offset::Utc::now().fixed_offset(),
+                None => now,
             };
+            let up_to = match up_to {
+                Some(up_to) => up_to,
+                None => now,
+            };
+            if at > up_to {
+                return Err(anyhow!(
+                    "review time ({:?}) must be <= selection time ({:?})",
+                    at,
+                    up_to
+                ));
+            }
 
             match act_on_card_ref(&path, prompt_fingerprint, |card_metas| {
-                card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= at);
+                card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= up_to);
                 shuffle_slice(card_metas, seed.unwrap_or_default());
                 for cm in card_metas {
                     review::review_card(cm, at, &output_settings)?
