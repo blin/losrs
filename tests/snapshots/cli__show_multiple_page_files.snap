@@ -3,8 +3,9 @@ source: tests/cli.rs
 info:
   program: losrs
   args:
+    - "--config=/tmp/.tmpDA23iC/losrs.toml"
     - show
-    - /tmp/.tmpAxaaoN
+    - /tmp/.tmpDA23iC
   envs: {}
   page_lines:
     - - "- Not card"
@@ -33,9 +34,9 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-- What is a sphere? #card
-  - Set of points in a 3 dimensional space that are equidistant from a center point.
 - What is the volume of a sphere (symbolic)? #card
   - $$V = \frac{4}{3} \pi r^3$$
+- What is a sphere? #card
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
 
 ----- stderr -----
