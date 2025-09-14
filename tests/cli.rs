@@ -506,10 +506,11 @@ macro_rules! test_card_review {
 
 
             let status = p.process.status().ok_or(anyhow!("could not get process status"))?;
-            match status {
-                WaitStatus::Exited(_, _) => {}
+            let exit_code = match status {
+                WaitStatus::Exited(_, exit_code) => exit_code,
                 _ => return Err(anyhow!("expected process to exit, got {:?}", status)),
-            }
+            };
+            assert_eq!(exit_code, 0, "expected `losrs review` to exit with exit code 0, got {}", exit_code);
 
             let file_raw = read_solitary_page(_graph_root.path())?;
             insta::with_settings!({
