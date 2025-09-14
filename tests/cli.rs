@@ -620,7 +620,46 @@ test_card_review!(
 test_card_output!(review_help, vec!["review", "--help"], vec![], vec![""]);
 
 test_card_review!(
-    review_card_not_ready,
+    review_card_not_due_early,
+    vec!["--at=2025-03-22T09:54:57.202Z", "--up-to=2025-11-21T00:00:00.000Z"],
+    r#"- Not card
+- What is a sphere? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#,
+    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
+    HashMap::from([
+        ("expected type of interaction".to_string(), "review".to_string()),
+        ("remembered".to_string(), "true".to_string())
+    ])
+);
+
+test_card_review!(
+    review_card_artificial_not_due,
+    vec!["--at=2025-11-21T00:00:00.000Z", "--up-to=2025-11-20T00:00:00.000Z"],
+    r#"- Not card
+- What is a sphere? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#,
+    |p: &mut PtySession| -> Result<()> { expect_no_review_interaction(p) },
+    HashMap::from([("expected type of interaction".to_string(), "no review".to_string()),])
+);
+
+test_card_review!(
+    review_card_not_due,
     vec!["--at=2024-01-01T15:04:05.123456789Z"],
     r#"- Not card
 - What is a sphere? #card
@@ -639,7 +678,11 @@ test_card_review!(
 
 test_card_review!(
     review_card_seed_0,
-    vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=0"],
+    vec![
+        "--at=2025-09-01T15:04:05.123456789Z",
+        "--up-to=2025-09-01T15:04:05.123456789Z",
+        "--seed=0"
+    ],
     r#"- Not card
 - Alphabet forward cards
   - What is Gregg Simplified for "N" (description)? #card
@@ -679,7 +722,11 @@ test_card_review!(
 
 test_card_review!(
     review_card_seed_100,
-    vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=100"],
+    vec![
+        "--at=2025-09-01T15:04:05.123456789Z",
+        "--up-to=2025-09-01T15:04:05.123456789Z",
+        "--seed=100"
+    ],
     r#"- Not card
 - Alphabet forward cards
   - What is Gregg Simplified for "N" (description)? #card
@@ -719,7 +766,12 @@ test_card_review!(
 
 #[test]
 fn newline_writeback_on_review() -> Result<()> {
-    let args = vec!["review", "$GRAPH_ROOT", "--at=2025-11-22T15:04:05.123456789Z"];
+    let args = vec![
+        "review",
+        "$GRAPH_ROOT",
+        "--at=2025-11-22T15:04:05.123456789Z",
+        "--up-to=2025-11-22T15:04:05.123456789Z",
+    ];
     let page = r#"- What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
