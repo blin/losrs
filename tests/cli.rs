@@ -100,14 +100,19 @@ fn build_args(args: &[&str], pages: &[&str]) -> Result<(tempfile::TempDir, Vec<S
     Ok((graph_root, final_args))
 }
 
+struct CardOutputTestParams<'a> {
+    args: Vec<&'a str>,
+    envs: Vec<(&'a str, &'a str)>,
+    pages: Vec<&'a str>,
+}
+
 macro_rules! test_card_output {
-    ($name:ident, $args:expr, $envs:expr, $pages:expr ) => {
+    ($name:ident, $params:expr ) => {
         #[test]
         fn $name() -> Result<()> {
-            let args: Vec<&str> = $args;
-            let envs: Vec<(&str,&str)> = $envs;
-            let pages: Vec<&str> = $pages;
-
+            let args: Vec<&str> = $params.args;
+            let envs: Vec<(&str,&str)> = $params.envs;
+            let pages: Vec<&str> = $params.pages;
             let (_graph_root, args) = build_args(&args, &pages)?;
 
             let mut cmd = construct_command(args, envs);
@@ -129,16 +134,23 @@ macro_rules! test_card_output {
     };
 }
 
-test_card_output!(root_help, vec!["--help"], vec![], vec![""]);
+test_card_output!(
+    root_help,
+    CardOutputTestParams { args: vec!["--help"], envs: vec![], pages: vec![""] }
+);
 
-test_card_output!(show_help, vec!["show", "--help"], vec![], vec![""]);
+test_card_output!(
+    show_help,
+    CardOutputTestParams { args: vec!["show", "--help"], envs: vec![], pages: vec![""] }
+);
 
 test_card_output!(
     show,
-    vec!["show", "$GRAPH_ROOT",],
-    vec![],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT",],
+        envs: vec![],
+        pages: vec![
+            r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -149,15 +161,17 @@ test_card_output!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_format_clean,
-    vec!["show", "$GRAPH_ROOT"],
-    vec![("LOSRS__OUTPUT__FORMAT", "clean")],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT"],
+        envs: vec![("LOSRS__OUTPUT__FORMAT", "clean")],
+        pages: vec![
+            r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -168,15 +182,17 @@ test_card_output!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_format_typst,
-    vec!["show", "$GRAPH_ROOT"],
-    vec![("LOSRS__OUTPUT__FORMAT", "typst")],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT"],
+        envs: vec![("LOSRS__OUTPUT__FORMAT", "typst")],
+        pages: vec![
+            r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -187,15 +203,17 @@ test_card_output!(
   - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_format_storage,
-    vec!["show", "$GRAPH_ROOT"],
-    vec![("LOSRS__OUTPUT__FORMAT", "storage")],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT"],
+        envs: vec![("LOSRS__OUTPUT__FORMAT", "storage")],
+        pages: vec![
+            r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -206,28 +224,32 @@ test_card_output!(
   - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_format_storage_card_without_metadata,
-    vec!["show", "$GRAPH_ROOT"],
-    vec![("LOSRS__OUTPUT__FORMAT", "storage")],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT"],
+        envs: vec![("LOSRS__OUTPUT__FORMAT", "storage")],
+        pages: vec![
+            r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
   - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_format_storage_card_with_fsrs_metadata,
-    vec!["show", "$GRAPH_ROOT"],
-    vec![("LOSRS__OUTPUT__FORMAT", "storage")],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT"],
+        envs: vec![("LOSRS__OUTPUT__FORMAT", "storage")],
+        pages: vec![
+            r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 9.0
   card-repeats:: 7
@@ -239,15 +261,17 @@ test_card_output!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_format_storage_card_with_reordered_metadata,
-    vec!["show", "$GRAPH_ROOT"],
-    vec![("LOSRS__OUTPUT__FORMAT", "storage")],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT"],
+        envs: vec![("LOSRS__OUTPUT__FORMAT", "storage")],
+        pages: vec![
+            r#"- Not card
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
   card-last-reviewed:: 2025-04-28T09:12:30.985Z
   card-last-interval:: 244.14
@@ -258,15 +282,17 @@ test_card_output!(
   - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_card_with_data_after_metadata,
-    vec!["show", "$GRAPH_ROOT",],
-    vec![],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT",],
+        envs: vec![],
+        pages: vec![
+            r#"- Not card
 - What is the relationship between angles $\\alpha$ and $\\gamma_{1}$ in the picture relative to the transversal?
   card-last-interval:: 30.0
   card-repeats:: 6
@@ -279,15 +305,17 @@ test_card_output!(
   - They are alternate angles.
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_card_with_unicode_prompt,
-    vec!["show", "$GRAPH_ROOT",],
-    vec![],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT",],
+        envs: vec![],
+        pages: vec![
+            r#"- Not card
 - Какова связь между углами $\\alpha$ и $\\gamma_{1}$ на изображении относительно секущей?
   card-last-interval:: 30.0
   card-repeats:: 6
@@ -300,17 +328,22 @@ test_card_output!(
   - Они накрест лежащие.
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
-test_card_output!(metadata_help, vec!["metadata", "--help"], vec![], vec![""]);
+test_card_output!(
+    metadata_help,
+    CardOutputTestParams { args: vec!["metadata", "--help"], envs: vec![], pages: vec![""] }
+);
 
 test_card_output!(
     metadata,
-    vec!["metadata", "$GRAPH_ROOT"],
-    vec![],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["metadata", "$GRAPH_ROOT"],
+        envs: vec![],
+        pages: vec![
+            r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -321,15 +354,17 @@ test_card_output!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_with_fingerprint,
-    vec!["show", "$GRAPH_ROOT", "0xb9de554a02212aca"],
-    vec![],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT", "0xb9de554a02212aca"],
+        envs: vec![],
+        pages: vec![
+            r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -348,15 +383,17 @@ test_card_output!(
   - $$V = \frac{4}{3} \pi r^3$$
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_multiple_page_files,
-    vec!["show", "$GRAPH_ROOT",],
-    vec![],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT",],
+        envs: vec![],
+        pages: vec![
+            r#"- Not card
 - What is the volume of a sphere (symbolic)? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -367,7 +404,7 @@ test_card_output!(
   - $$V = \frac{4}{3} \pi r^3$$
 - Not card
 "#,
-        r#"- Not card
+            r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -378,15 +415,17 @@ test_card_output!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_card_is_deeply_nested,
-    vec!["show", "$GRAPH_ROOT",],
-    vec![],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT",],
+        envs: vec![],
+        pages: vec![
+            r#"- Not card
 - induction
   - Automatically generated induction principles for Inductive Types (in general)
     - What kind of function is a generated induction principle function (similarity, not implimentation)? #card
@@ -399,15 +438,17 @@ test_card_output!(
       - Fixpoint
 - Not card
 "#,
-    ]
+        ]
+    }
 );
 
 test_card_output!(
     show_format_storage_card_is_deeply_nested,
-    vec!["show", "$GRAPH_ROOT"],
-    vec![("LOSRS__OUTPUT__FORMAT", "storage")],
-    vec![
-        r#"- Not card
+    CardOutputTestParams {
+        args: vec!["show", "$GRAPH_ROOT"],
+        envs: vec![("LOSRS__OUTPUT__FORMAT", "storage")],
+        pages: vec![
+            r#"- Not card
 - induction
   - Automatically generated induction principles for Inductive Types (in general)
     - What kind of function is a generated induction principle function (similarity, not implimentation)? #card
@@ -420,7 +461,8 @@ test_card_output!(
       - Fixpoint
 - Not card
 "#,
-    ]
+        ]
+    }
 );
 
 #[derive(Serialize)]
@@ -620,7 +662,10 @@ test_card_review!(
     ])
 );
 
-test_card_output!(review_help, vec!["review", "--help"], vec![], vec![""]);
+test_card_output!(
+    review_help,
+    CardOutputTestParams { args: vec!["review", "--help"], envs: vec![], pages: vec![""] }
+);
 
 test_card_review!(
     review_card_not_due_early,
@@ -829,13 +874,21 @@ fn newline_writeback_on_review() -> Result<()> {
     Ok(())
 }
 
-test_card_output!(config_help, vec!["config", "--help"], vec![], vec![""]);
+test_card_output!(
+    config_help,
+    CardOutputTestParams { args: vec!["config", "--help"], envs: vec![], pages: vec![""] }
+);
 
-test_card_output!(config_show, vec!["config", "show"], vec![], vec![""]);
+test_card_output!(
+    config_show,
+    CardOutputTestParams { args: vec!["config", "show"], envs: vec![], pages: vec![""] }
+);
 
 test_card_output!(
     config_show_with_env_override,
-    vec!["config", "show"],
-    vec![("LOSRS__OUTPUT__FORMAT", "sixel")],
-    vec![""]
+    CardOutputTestParams {
+        args: vec!["config", "show"],
+        envs: vec![("LOSRS__OUTPUT__FORMAT", "sixel")],
+        pages: vec![""]
+    }
 );
