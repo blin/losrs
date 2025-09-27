@@ -529,56 +529,66 @@ fn read_solitary_page(graph_root: &Path) -> Result<String> {
     Ok(fs::read_to_string(page_path)?)
 }
 
-macro_rules! test_card_review {
-    ($name:ident, $args:expr, $page:expr, $f:expr, $interaction_meta:expr ) => {
-        test_card_review!($name, $args, $page, $f, $interaction_meta, 0);
+struct TestCardReviewParams<'a> {
+    args: Vec<&'a str>,
+    page: &'a str,
+    f: fn(&mut PtySession) -> Result<()>,
+    interaction_meta: HashMap<String, String>,
+    expected_code: i32,
+}
+
+fn test_card_review_inner(params: TestCardReviewParams, snapshot_name: &str) -> Result<()> {
+    let mut args: Vec<&str> = vec!["review", "$GRAPH_ROOT"];
+    args.extend_from_slice(&(params.args));
+    let (_graph_root, args) = build_args(&args, &[params.page])?;
+    let cmd = construct_command(&args, vec![]);
+
+    let cmd_info = &ReviewInfo::new(&cmd, params.page, params.interaction_meta);
+    let mut p = spawn_command(cmd, Some(1000))?;
+
+    (params.f)(&mut p)?;
+
+    let status = p.process.status().ok_or(anyhow!("could not get process status"))?;
+    let exit_code = match status {
+        WaitStatus::Exited(_, exit_code) => exit_code,
+        _ => return Err(anyhow!("expected process to exit, got {:?}", status)),
     };
-    ($name:ident, $args:expr, $page:expr, $f:expr, $interaction_meta:expr, $expected_code:expr ) => {
+    assert_eq!(
+        exit_code, params.expected_code,
+        "expected `losrs review` to exit with exit code {}, got {}",
+        params.expected_code, exit_code
+    );
+
+    let file_raw = read_solitary_page(_graph_root.path())?;
+    insta::with_settings!({
+        omit_expression => true,
+        info => cmd_info,
+        filters => vec![
+            (r"/tmp/.tmp\w+/", "[TMP_DIR]/"),
+        ],
+    },
+    {
+        insta::assert_snapshot!(snapshot_name, file_raw);
+    });
+
+    Ok(())
+}
+
+macro_rules! test_card_review {
+    ($name:ident, $params:expr) => {
         #[test]
         fn $name() -> Result<()> {
-            let mut args: Vec<&str> = vec!["review", "$GRAPH_ROOT"];
-            args.extend_from_slice(&($args));
-            let page: &str = $page;
-            let f: fn(&mut PtySession) -> Result<()> = $f;
-            let interaction_meta: HashMap<String, String> = $interaction_meta;
-
-            let (_graph_root, args) = build_args(&args, &[page])?;
-            let cmd = construct_command(&args, vec![]);
-
-            let cmd_info = &ReviewInfo::new(&cmd, page, interaction_meta);
-            let mut p = spawn_command(cmd, Some(1000))?;
-
-            f(&mut p)?;
-
-
-            let status = p.process.status().ok_or(anyhow!("could not get process status"))?;
-            let exit_code = match status {
-                WaitStatus::Exited(_, exit_code) => exit_code,
-                _ => return Err(anyhow!("expected process to exit, got {:?}", status)),
-            };
-            assert_eq!(exit_code, $expected_code, "expected `losrs review` to exit with exit code {}, got {}", $expected_code, exit_code);
-
-            let file_raw = read_solitary_page(_graph_root.path())?;
-            insta::with_settings!({
-                omit_expression => true,
-                info => cmd_info,
-                filters => vec![
-                    (r"/tmp/.tmp\w+/", "[TMP_DIR]/"),
-                ],
-            },
-            {
-                insta::assert_snapshot!(file_raw);
-            });
-
-            Ok(())
+            let params: TestCardReviewParams = $params;
+            test_card_review_inner(params, stringify!($name))
         }
     };
 }
 
 test_card_review!(
     review_remembered_yes,
-    vec!["--at=2025-11-22T15:04:05.123456789Z"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2025-11-22T15:04:05.123456789Z"],
+        page: r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -589,17 +599,20 @@ test_card_review!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
-    HashMap::from([
-        ("expected type of interaction".to_string(), "review".to_string()),
-        ("remembered".to_string(), "true".to_string())
-    ])
+        f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
+        interaction_meta: HashMap::from([
+            ("expected type of interaction".to_string(), "review".to_string()),
+            ("remembered".to_string(), "true".to_string())
+        ]),
+        expected_code: 0
+    }
 );
 
 test_card_review!(
     review_remembered_no,
-    vec!["--at=2025-11-22T15:04:05.123456789Z"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2025-11-22T15:04:05.123456789Z"],
+        page: r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -610,68 +623,75 @@ test_card_review!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
-    HashMap::from([
-        ("expected type of interaction".to_string(), "review".to_string()),
-        ("remembered".to_string(), "false".to_string())
-    ])
+        f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
+        interaction_meta: HashMap::from([
+            ("expected type of interaction".to_string(), "review".to_string()),
+            ("remembered".to_string(), "false".to_string())
+        ]),
+        expected_code: 0
+    }
 );
 
 test_card_review!(
     review_card_without_meta_remembered_yes,
-    vec!["--at=2025-11-22T15:04:05.123456789Z"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2025-11-22T15:04:05.123456789Z"],
+        page: r#"- Not card
 - What is a sphere? #card
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
-    HashMap::from([
-        ("expected type of interaction".to_string(), "review".to_string()),
-        ("remembered".to_string(), "true".to_string())
-    ])
+        f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
+        interaction_meta: HashMap::from([
+            ("expected type of interaction".to_string(), "review".to_string()),
+            ("remembered".to_string(), "true".to_string())
+        ]),
+        expected_code: 0
+    }
 );
 
 test_card_review!(
     review_card_without_meta_remembered_no,
-    vec!["--at=2025-11-22T15:04:05.123456789Z"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2025-11-22T15:04:05.123456789Z"],
+        page: r#"- Not card
 - What is a sphere? #card
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
-    HashMap::from([
-        ("expected type of interaction".to_string(), "review".to_string()),
-        ("remembered".to_string(), "false".to_string())
-    ])
+        f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
+        interaction_meta: HashMap::from([
+            ("expected type of interaction".to_string(), "review".to_string()),
+            ("remembered".to_string(), "false".to_string())
+        ]),
+        expected_code: 0
+    }
 );
 
 test_card_review!(
     review_card_second_remembered_no,
-    vec!["--at=2025-11-23T15:04:05.123456789Z"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2025-11-23T15:04:05.123456789Z"],
+        page: r#"- Not card
 - What is a sphere? #card
   card-fsrs-metadata:: {"due":"2025-11-23T15:04:05.123456789Z","stability":0.4072,"difficulty":7.2102,"elapsed_days":0,"scheduled_days":1,"reps":1,"lapses":0,"state":"Review","last_review":"2025-11-22T15:04:05.123456789Z"}
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
-    HashMap::from([
-        ("expected type of interaction".to_string(), "review".to_string()),
-        ("remembered".to_string(), "false".to_string())
-    ])
-);
-
-test_card_output!(
-    review_help,
-    TestCardOutputParams { args: vec!["review", "--help"], envs: vec![], pages: vec![""] }
+        f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
+        interaction_meta: HashMap::from([
+            ("expected type of interaction".to_string(), "review".to_string()),
+            ("remembered".to_string(), "false".to_string())
+        ]),
+        expected_code: 0
+    }
 );
 
 test_card_review!(
     review_card_not_due_early,
-    vec!["--at=2025-03-22T09:54:57.202Z", "--up-to=2025-11-21T00:00:00.000Z"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2025-03-22T09:54:57.202Z", "--up-to=2025-11-21T00:00:00.000Z"],
+        page: r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -682,17 +702,20 @@ test_card_review!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
-    HashMap::from([
-        ("expected type of interaction".to_string(), "review".to_string()),
-        ("remembered".to_string(), "true".to_string())
-    ])
+        f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
+        interaction_meta: HashMap::from([
+            ("expected type of interaction".to_string(), "review".to_string()),
+            ("remembered".to_string(), "true".to_string())
+        ]),
+        expected_code: 0
+    }
 );
 
 test_card_review!(
     review_card_artificial_not_due,
-    vec!["--at=2025-11-21T00:00:00.000Z", "--up-to=2025-11-20T00:00:00.000Z"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2025-11-21T00:00:00.000Z", "--up-to=2025-11-20T00:00:00.000Z"],
+        page: r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -703,14 +726,20 @@ test_card_review!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> { expect_no_review_interaction(p) },
-    HashMap::from([("expected type of interaction".to_string(), "no review".to_string()),])
+        f: |p: &mut PtySession| -> Result<()> { expect_no_review_interaction(p) },
+        interaction_meta: HashMap::from([(
+            "expected type of interaction".to_string(),
+            "no review".to_string()
+        ),]),
+        expected_code: 0
+    }
 );
 
 test_card_review!(
     review_card_before_last_reviewed,
-    vec!["--at=2025-03-21T09:54:57.202Z", "--up-to=2025-11-21T00:00:00.000Z"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2025-03-21T09:54:57.202Z", "--up-to=2025-11-21T00:00:00.000Z"],
+        page: r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -721,18 +750,23 @@ test_card_review!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> {
-        p.exp_string("before it was last reviewed")?;
-        Ok(())
-    },
-    HashMap::from([("expected type of interaction".to_string(), "no review".to_string()),]),
-    1
+        f: |p: &mut PtySession| -> Result<()> {
+            p.exp_string("before it was last reviewed")?;
+            Ok(())
+        },
+        interaction_meta: HashMap::from([(
+            "expected type of interaction".to_string(),
+            "no review".to_string()
+        ),]),
+        expected_code: 1
+    }
 );
 
 test_card_review!(
     review_card_not_due,
-    vec!["--at=2024-01-01T15:04:05.123456789Z"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2024-01-01T15:04:05.123456789Z"],
+        page: r#"- Not card
 - What is a sphere? #card
   card-last-interval:: 244.14
   card-repeats:: 6
@@ -743,14 +777,20 @@ test_card_review!(
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> { expect_no_review_interaction(p) },
-    HashMap::from([("expected type of interaction".to_string(), "no review".to_string()),])
+        f: |p: &mut PtySession| -> Result<()> { expect_no_review_interaction(p) },
+        interaction_meta: HashMap::from([(
+            "expected type of interaction".to_string(),
+            "no review".to_string()
+        ),]),
+        expected_code: 0
+    }
 );
 
 test_card_review!(
     review_card_seed_0,
-    vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=0"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=0"],
+        page: r#"- Not card
 - Alphabet forward cards
   - What is Gregg Simplified for "N" (description)? #card
     card-last-interval:: 15.0
@@ -770,27 +810,30 @@ test_card_review!(
     - forward long stroke
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> {
-        expect_review_interaction(p, true)?;
-        expect_nope_out_interaction(p)?;
-        Ok(())
-    },
-    HashMap::from([
-        (
-            "expected type of interaction".to_string(),
-            "review first card, then nope out".to_string()
-        ),
-        (
-            "first card with given seed".to_string(),
-            r#"What is Gregg Simplified for "M" (description)?"#.to_string()
-        ),
-    ])
+        f: |p: &mut PtySession| -> Result<()> {
+            expect_review_interaction(p, true)?;
+            expect_nope_out_interaction(p)?;
+            Ok(())
+        },
+        interaction_meta: HashMap::from([
+            (
+                "expected type of interaction".to_string(),
+                "review first card, then nope out".to_string()
+            ),
+            (
+                "first card with given seed".to_string(),
+                r#"What is Gregg Simplified for "M" (description)?"#.to_string()
+            ),
+        ]),
+        expected_code: 0
+    }
 );
 
 test_card_review!(
     review_card_seed_100,
-    vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=100"],
-    r#"- Not card
+    TestCardReviewParams {
+        args: vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=100"],
+        page: r#"- Not card
 - Alphabet forward cards
   - What is Gregg Simplified for "N" (description)? #card
     card-last-interval:: 15.0
@@ -810,21 +853,23 @@ test_card_review!(
     - forward long stroke
 - Not card
 "#,
-    |p: &mut PtySession| -> Result<()> {
-        expect_review_interaction(p, true)?;
-        expect_nope_out_interaction(p)?;
-        Ok(())
-    },
-    HashMap::from([
-        (
-            "expected type of interaction".to_string(),
-            "review first card, then nope out".to_string()
-        ),
-        (
-            "first card with given seed".to_string(),
-            r#"What is Gregg Simplified for "N" (description)?"#.to_string()
-        ),
-    ])
+        f: |p: &mut PtySession| -> Result<()> {
+            expect_review_interaction(p, true)?;
+            expect_nope_out_interaction(p)?;
+            Ok(())
+        },
+        interaction_meta: HashMap::from([
+            (
+                "expected type of interaction".to_string(),
+                "review first card, then nope out".to_string()
+            ),
+            (
+                "first card with given seed".to_string(),
+                r#"What is Gregg Simplified for "N" (description)?"#.to_string()
+            ),
+        ]),
+        expected_code: 0
+    }
 );
 
 #[test]
@@ -861,6 +906,11 @@ fn newline_writeback_on_review() -> Result<()> {
 
     Ok(())
 }
+
+test_card_output!(
+    review_help,
+    TestCardOutputParams { args: vec!["review", "--help"], envs: vec![], pages: vec![""] }
+);
 
 test_card_output!(
     config_help,
