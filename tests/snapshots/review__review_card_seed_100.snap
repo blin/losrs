@@ -1,10 +1,11 @@
 ---
-source: tests/cli.rs
+source: tests/review.rs
 info:
   program: losrs
   args:
+    - "--config=/tmp/.tmp2HxfQQ/losrs.toml"
     - review
-    - /tmp/.tmpUjdCR1
+    - /tmp/.tmp2HxfQQ
     - "--at=2025-09-01T15:04:05.123456789Z"
     - "--seed=100"
   page_lines:
@@ -34,7 +35,7 @@ info:
 ---
 - Not card
 - Alphabet forward cards
-  - What is Gregg Simplified for "N" (description)? #card
+  - What is Gregg Simplified for "N" (description)? #card <!-- CSN:0 -->
     card-last-interval:: 120
     card-repeats:: 5
     card-ease-factor:: 2.5
