@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -14,14 +13,35 @@ use rexpect::session::spawn_command;
 use crate::common::build_args;
 use crate::common::construct_command;
 use crate::common::insta_cmd_describe_program;
+use crate::common::redacted_args;
+use crate::common::redacted_text;
 
 mod common;
+
+#[derive(Serialize)]
+pub struct ReviewInfo {
+    program: String,
+    args: Vec<String>,
+    page_lines: Vec<String>,
+    interaction_meta: Vec<(String, String)>,
+}
+
+impl ReviewInfo {
+    fn new(cmd: &Command, page: &str, interaction_meta: Vec<(String, String)>) -> Self {
+        ReviewInfo {
+            program: insta_cmd_describe_program(cmd.get_program()),
+            args: redacted_args(cmd),
+            page_lines: page.split("\n").map(|s| s.to_owned()).collect(),
+            interaction_meta,
+        }
+    }
+}
 
 struct TestCardReviewParams<'a> {
     args: Vec<&'a str>,
     page: &'a str,
     f: fn(&mut PtySession) -> Result<()>,
-    interaction_meta: HashMap<String, String>,
+    interaction_meta: Vec<(String, String)>,
     expected_code: i32,
 }
 
@@ -47,13 +67,10 @@ fn test_card_review_inner(params: TestCardReviewParams, snapshot_name: &str) -> 
         params.expected_code, exit_code
     );
 
-    let file_raw = read_solitary_page(_graph_root.path())?;
+    let file_raw = redacted_text(&read_solitary_page(_graph_root.path())?);
     insta::with_settings!({
         omit_expression => true,
         info => cmd_info,
-        filters => vec![
-            (r"/tmp/.tmp\w+/", "[TMP_DIR]/"),
-        ],
     },
     {
         insta::assert_snapshot!(snapshot_name, file_raw);
@@ -70,25 +87,6 @@ macro_rules! test_card_review {
             test_card_review_inner(params, stringify!($name))
         }
     };
-}
-
-#[derive(Serialize)]
-pub struct ReviewInfo {
-    program: String,
-    args: Vec<String>,
-    page_lines: Vec<String>,
-    interaction_meta: HashMap<String, String>,
-}
-
-impl ReviewInfo {
-    fn new(cmd: &Command, page: &str, interaction_meta: HashMap<String, String>) -> Self {
-        ReviewInfo {
-            program: insta_cmd_describe_program(cmd.get_program()),
-            args: cmd.get_args().map(|x| x.to_string_lossy().into_owned()).collect(),
-            page_lines: page.split("\n").map(|s| s.to_owned()).collect(),
-            interaction_meta,
-        }
-    }
 }
 
 fn expect_review_interaction(p: &mut PtySession, remembered: bool) -> Result<()> {
@@ -151,10 +149,10 @@ test_card_review!(
 - Not card
 "#,
         f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
-        interaction_meta: HashMap::from([
+        interaction_meta: vec![
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "true".to_string())
-        ]),
+        ],
         expected_code: 0
     }
 );
@@ -175,10 +173,10 @@ test_card_review!(
 - Not card
 "#,
         f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
-        interaction_meta: HashMap::from([
+        interaction_meta: vec![
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "false".to_string())
-        ]),
+        ],
         expected_code: 0
     }
 );
@@ -193,10 +191,10 @@ test_card_review!(
 - Not card
 "#,
         f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
-        interaction_meta: HashMap::from([
+        interaction_meta: vec![
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "true".to_string())
-        ]),
+        ],
         expected_code: 0
     }
 );
@@ -211,10 +209,10 @@ test_card_review!(
 - Not card
 "#,
         f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
-        interaction_meta: HashMap::from([
+        interaction_meta: vec![
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "false".to_string())
-        ]),
+        ],
         expected_code: 0
     }
 );
@@ -230,10 +228,10 @@ test_card_review!(
 - Not card
 "#,
         f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, false) },
-        interaction_meta: HashMap::from([
+        interaction_meta: vec![
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "false".to_string())
-        ]),
+        ],
         expected_code: 0
     }
 );
@@ -254,10 +252,10 @@ test_card_review!(
 - Not card
 "#,
         f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
-        interaction_meta: HashMap::from([
+        interaction_meta: vec![
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "true".to_string())
-        ]),
+        ],
         expected_code: 0
     }
 );
@@ -278,10 +276,10 @@ test_card_review!(
 - Not card
 "#,
         f: |p: &mut PtySession| -> Result<()> { expect_no_review_interaction(p) },
-        interaction_meta: HashMap::from([(
+        interaction_meta: vec![(
             "expected type of interaction".to_string(),
             "no review".to_string()
-        ),]),
+        ),],
         expected_code: 0
     }
 );
@@ -305,10 +303,10 @@ test_card_review!(
             p.exp_string("before it was last reviewed")?;
             Ok(())
         },
-        interaction_meta: HashMap::from([(
+        interaction_meta: vec![(
             "expected type of interaction".to_string(),
             "no review".to_string()
-        ),]),
+        ),],
         expected_code: 1
     }
 );
@@ -329,10 +327,10 @@ test_card_review!(
 - Not card
 "#,
         f: |p: &mut PtySession| -> Result<()> { expect_no_review_interaction(p) },
-        interaction_meta: HashMap::from([(
+        interaction_meta: vec![(
             "expected type of interaction".to_string(),
             "no review".to_string()
-        ),]),
+        ),],
         expected_code: 0
     }
 );
@@ -366,7 +364,7 @@ test_card_review!(
             expect_nope_out_interaction(p)?;
             Ok(())
         },
-        interaction_meta: HashMap::from([
+        interaction_meta: vec![
             (
                 "expected type of interaction".to_string(),
                 "review first card, then nope out".to_string()
@@ -375,7 +373,7 @@ test_card_review!(
                 "first card with given seed".to_string(),
                 r#"What is Gregg Simplified for "M" (description)?"#.to_string()
             ),
-        ]),
+        ],
         expected_code: 0
     }
 );
@@ -409,7 +407,7 @@ test_card_review!(
             expect_nope_out_interaction(p)?;
             Ok(())
         },
-        interaction_meta: HashMap::from([
+        interaction_meta: vec![
             (
                 "expected type of interaction".to_string(),
                 "review first card, then nope out".to_string()
@@ -418,7 +416,7 @@ test_card_review!(
                 "first card with given seed".to_string(),
                 r#"What is Gregg Simplified for "N" (description)?"#.to_string()
             ),
-        ]),
+        ],
         expected_code: 0
     }
 );

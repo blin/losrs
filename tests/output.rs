@@ -7,6 +7,8 @@ use serde::Serialize;
 use crate::common::build_args;
 use crate::common::construct_command;
 use crate::common::insta_cmd_describe_program;
+use crate::common::redacted_args;
+use crate::common::redacted_text;
 
 mod common;
 
@@ -22,7 +24,7 @@ impl Info {
     fn new(cmd: &Command, pages: Vec<&str>) -> Self {
         Info {
             program: insta_cmd_describe_program(cmd.get_program()),
-            args: cmd.get_args().map(|x| x.to_string_lossy().into_owned()).collect(),
+            args: redacted_args(cmd),
             envs: cmd
                 .get_envs()
                 .map(|(k, v)| {
@@ -44,8 +46,8 @@ fn insta_cmd_format_output(output: std::process::Output) -> String {
         "success: {:?}\nexit_code: {}\n----- stdout -----\n{}\n----- stderr -----\n{}",
         output.status.success(),
         output.status.code().unwrap_or(!0),
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr),
+        redacted_text(&String::from_utf8_lossy(&output.stdout)),
+        redacted_text(&String::from_utf8_lossy(&output.stderr)),
     )
 }
 
@@ -65,9 +67,6 @@ fn test_card_output_inner(params: TestCardOutputParams, snapshot_name: &str) -> 
     insta::with_settings!({
         omit_expression => true,
         info => &Info::new(&cmd, params.pages),
-        filters => vec![
-            (r"/[^ ]+/.tmp\w+/", "[TMP_DIR]/"),
-        ],
     },
     {
         insta::assert_snapshot!(snapshot_name, insta_cmd_format_output(output));
