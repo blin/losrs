@@ -16,6 +16,7 @@ etcetera = "0.10.0"
 image = { version = "0.25.6", default-features = false, features = ["png"] }
 markdown = "1.0.0"
 rand = { version = "0.9.1", default-features = false, features = ["small_rng"] }
+regex = { version = "1.12.2", default-features = false }
 rs-fsrs = { version = "1.2.1", features = ["serde"] }
 serde = "1.0.219"
 serde_json = "1.0.140"

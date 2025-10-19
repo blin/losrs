@@ -2,10 +2,28 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use std::sync::LazyLock;
 
 use anyhow::Result;
 
 use insta_cmd::get_cargo_bin;
+use regex::Regex;
+
+// TempDir uses https://docs.rs/fastrand/latest/fastrand/struct.Rng.html#method.alphanumeric
+// This regex only matches on unix paths,
+// will need to do something else if anyone ever runs these tests on Windows.
+static TMP_DIR_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"/.*?\.tmp[a-zA-Z0-9]{6}").unwrap());
+
+pub fn redacted_args(cmd: &Command) -> Vec<String> {
+    cmd.get_args()
+        .map(|x| TMP_DIR_RE.replace(&x.to_string_lossy(), "[TMP_DIR]").to_string())
+        .collect()
+}
+
+pub fn redact_text(out: &str) -> String {
+    TMP_DIR_RE.replace(out, "[TMP_DIR]").to_string()
+}
 
 pub fn build_args(args: &[&str], pages: &[&str]) -> Result<(tempfile::TempDir, Vec<String>)> {
     let graph_root = construct_graph_root(pages)?;

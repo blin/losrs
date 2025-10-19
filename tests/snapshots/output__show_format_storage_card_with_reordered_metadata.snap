@@ -1,10 +1,11 @@
 ---
-source: tests/cli.rs
+source: tests/output.rs
 info:
   program: losrs
   args:
+    - "--config=[TMP_DIR]/losrs.toml"
     - show
-    - /tmp/.tmpFzH9e7
+    - "[TMP_DIR]"
   envs:
     LOSRS__OUTPUT__FORMAT: storage
   page_lines:
