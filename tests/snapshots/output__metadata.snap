@@ -17,6 +17,14 @@ info:
       - "  card-last-reviewed:: 2025-03-22T09:54:57.202Z"
       - "  card-last-score:: 5"
       - "  - Set of points in a 3 dimensional space that are equidistant from a center point."
+      - "- What is the volume of a sphere (symbolic)? #card <!-- CSN:5 -->"
+      - "  card-last-interval:: 244.14"
+      - "  card-repeats:: 6"
+      - "  card-ease-factor:: 3.1"
+      - "  card-next-schedule:: 2025-11-27T00:00:00.000Z"
+      - "  card-last-reviewed:: 2025-03-28T07:46:41.223Z"
+      - "  card-last-score:: 5"
+      - "  - $$V = \\frac{4}{3} \\pi r^3$$"
       - "- Not card"
       - ""
 ---
@@ -24,6 +32,7 @@ success: true
 exit_code: 0
 ----- stdout -----
 CardMetadata {
+  card serial number : N/A
   source_path        : [TMP_DIR]/pages/0.md
   prompt_fingerprint : 0xb9de554a02212aca
   prompt_prefix      : What is a sphere? #card
@@ -32,6 +41,18 @@ CardMetadata {
     next_schedule : 2025-11-21T00:00:00+00:00
     last_reviewed : 2025-03-22T09:54:57.202+00:00
     fsrs_meta     : Card { due: 2025-11-21T00:00:00Z, stability: 244.14, difficulty: 5.0, elapsed_days: 244, scheduled_days: 244, reps: 6, lapses: 0, state: Review, last_review: 2025-03-22T09:54:57.202Z }
+  }
+}
+CardMetadata {
+  card serial number : 5
+  source_path        : [TMP_DIR]/pages/0.md
+  prompt_fingerprint : 0x7e7f6c73cea43876
+  prompt_prefix      : What is the volume of a sphere (symbolic)? #card <!-- CSN:5 -->
+  srs_meta           : SRSMeta {
+    repeats       : 6
+    next_schedule : 2025-11-27T00:00:00+00:00
+    last_reviewed : 2025-03-28T07:46:41.223+00:00
+    fsrs_meta     : Card { due: 2025-11-27T00:00:00Z, stability: 244.14, difficulty: 5.0, elapsed_days: 244, scheduled_days: 244, reps: 6, lapses: 0, state: Review, last_review: 2025-03-28T07:46:41.223Z }
   }
 }
 

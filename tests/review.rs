@@ -43,12 +43,35 @@ struct TestCardReviewParams<'a> {
     f: fn(&mut PtySession) -> Result<()>,
     interaction_meta: Vec<(String, String)>,
     expected_code: i32,
+    last_serial_num: Option<u64>,
+}
+
+impl<'a> Default for TestCardReviewParams<'a> {
+    fn default() -> Self {
+        Self {
+            args: Default::default(),
+            page: Default::default(),
+            f: |_| Ok(()),
+            interaction_meta: Default::default(),
+            expected_code: 0,
+            last_serial_num: None,
+        }
+    }
+}
+
+fn store_initial_serial_num(graph_root: &Path, serial_num: Option<u64>) -> Result<()> {
+    let Some(serial_num) = serial_num else {
+        return Ok(());
+    };
+    std::fs::write(graph_root.join(".card-serial"), serial_num.to_string())?;
+    Ok(())
 }
 
 fn test_card_review_inner(params: TestCardReviewParams, snapshot_name: &str) -> Result<()> {
     let mut args: Vec<&str> = vec!["review", "$GRAPH_ROOT"];
     args.extend_from_slice(&(params.args));
-    let (_graph_root, args) = build_args(&args, &[params.page])?;
+    let (graph_root, args) = build_args(&args, &[params.page])?;
+    store_initial_serial_num(graph_root.path(), params.last_serial_num)?;
     let cmd = construct_command(&args, vec![]);
 
     let cmd_info = &ReviewInfo::new(&cmd, params.page, params.interaction_meta);
@@ -67,7 +90,7 @@ fn test_card_review_inner(params: TestCardReviewParams, snapshot_name: &str) -> 
         params.expected_code, exit_code
     );
 
-    let file_raw = redacted_text(&read_solitary_page(_graph_root.path())?);
+    let file_raw = redacted_text(&read_solitary_page(graph_root.path())?);
     insta::with_settings!({
         omit_expression => true,
         info => cmd_info,
@@ -153,7 +176,59 @@ test_card_review!(
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "true".to_string())
         ],
-        expected_code: 0
+        ..Default::default()
+    }
+);
+
+test_card_review!(
+    review_remembered_yes_csn_not_assigned_not_first,
+    TestCardReviewParams {
+        args: vec!["--at=2025-11-22T15:04:05.123456789Z"],
+        page: r#"- Not card
+- What is a sphere? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#,
+        f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
+        interaction_meta: vec![
+            ("expected type of interaction".to_string(), "review".to_string()),
+            ("remembered".to_string(), "true".to_string()),
+            ("last_serial_num".to_string(), "5".to_string()),
+        ],
+        last_serial_num: Some(5),
+        ..Default::default()
+    }
+);
+
+test_card_review!(
+    review_remembered_yes_csn_assigned_not_first,
+    TestCardReviewParams {
+        args: vec!["--at=2025-11-22T15:04:05.123456789Z"],
+        page: r#"- Not card
+- What is a sphere? #card <!-- CSN:3 -->
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+"#,
+        f: |p: &mut PtySession| -> Result<()> { expect_review_interaction(p, true) },
+        interaction_meta: vec![
+            ("expected type of interaction".to_string(), "review".to_string()),
+            ("remembered".to_string(), "true".to_string()),
+            ("last_serial_num".to_string(), "5".to_string()),
+        ],
+        last_serial_num: Some(5),
+        ..Default::default()
     }
 );
 
@@ -177,7 +252,7 @@ test_card_review!(
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "false".to_string())
         ],
-        expected_code: 0
+        ..Default::default()
     }
 );
 
@@ -195,7 +270,7 @@ test_card_review!(
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "true".to_string())
         ],
-        expected_code: 0
+        ..Default::default()
     }
 );
 
@@ -213,7 +288,7 @@ test_card_review!(
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "false".to_string())
         ],
-        expected_code: 0
+        ..Default::default()
     }
 );
 
@@ -232,7 +307,7 @@ test_card_review!(
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "false".to_string())
         ],
-        expected_code: 0
+        ..Default::default()
     }
 );
 
@@ -256,7 +331,7 @@ test_card_review!(
             ("expected type of interaction".to_string(), "review".to_string()),
             ("remembered".to_string(), "true".to_string())
         ],
-        expected_code: 0
+        ..Default::default()
     }
 );
 
@@ -280,7 +355,7 @@ test_card_review!(
             "expected type of interaction".to_string(),
             "no review".to_string()
         ),],
-        expected_code: 0
+        ..Default::default()
     }
 );
 
@@ -307,7 +382,8 @@ test_card_review!(
             "expected type of interaction".to_string(),
             "no review".to_string()
         ),],
-        expected_code: 1
+        expected_code: 1,
+        ..Default::default()
     }
 );
 
@@ -331,7 +407,7 @@ test_card_review!(
             "expected type of interaction".to_string(),
             "no review".to_string()
         ),],
-        expected_code: 0
+        ..Default::default()
     }
 );
 
@@ -374,7 +450,7 @@ test_card_review!(
                 r#"What is Gregg Simplified for "M" (description)?"#.to_string()
             ),
         ],
-        expected_code: 0
+        ..Default::default()
     }
 );
 
@@ -417,7 +493,93 @@ test_card_review!(
                 r#"What is Gregg Simplified for "N" (description)?"#.to_string()
             ),
         ],
-        expected_code: 0
+        ..Default::default()
+    }
+);
+
+test_card_review!(
+    review_two_cards_seed_0,
+    TestCardReviewParams {
+        args: vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=0"],
+        page: r#"- Not card
+- Alphabet forward cards
+  - What is Gregg Simplified for "N" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward short stroke
+  - What is Gregg Simplified for "M" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward long stroke
+- Not card
+"#,
+        f: |p: &mut PtySession| -> Result<()> {
+            expect_review_interaction(p, true)?;
+            expect_review_interaction(p, true)?;
+            Ok(())
+        },
+        interaction_meta: vec![
+            (
+                "expected type of interaction".to_string(),
+                "review first card, then second card".to_string()
+            ),
+            (
+                "first card with given seed".to_string(),
+                r#"What is Gregg Simplified for "M" (description)?"#.to_string()
+            ),
+        ],
+        ..Default::default()
+    }
+);
+
+test_card_review!(
+    review_two_cards_seed_100,
+    TestCardReviewParams {
+        args: vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=100"],
+        page: r#"- Not card
+- Alphabet forward cards
+  - What is Gregg Simplified for "N" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward short stroke
+  - What is Gregg Simplified for "M" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward long stroke
+- Not card
+"#,
+        f: |p: &mut PtySession| -> Result<()> {
+            expect_review_interaction(p, true)?;
+            expect_review_interaction(p, true)?;
+            Ok(())
+        },
+        interaction_meta: vec![
+            (
+                "expected type of interaction".to_string(),
+                "review first card, then second card".to_string()
+            ),
+            (
+                "first card with given seed".to_string(),
+                r#"What is Gregg Simplified for "N" (description)?"#.to_string()
+            ),
+        ],
+        ..Default::default()
     }
 );
 
@@ -519,7 +681,7 @@ fn newline_writeback_on_review() -> Result<()> {
   card-last-score:: 5
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card"#;
-    let (_graph_root, args) = build_args(&args, &[page])?;
+    let (graph_root, args) = build_args(&args, &[page])?;
     let cmd = construct_command(&args, vec![]);
 
     let mut p = spawn_command(cmd, Some(1000))?;
@@ -532,7 +694,7 @@ fn newline_writeback_on_review() -> Result<()> {
         _ => return Err(anyhow!("expected process to exit, got {:?}", status)),
     }
 
-    let page_raw = read_solitary_page(_graph_root.path())?;
+    let page_raw = read_solitary_page(graph_root.path())?;
     let leading_newline_count = page_raw.chars().take_while(|&c| c == '\n').count();
     let trailing_newline_count = page_raw.chars().rev().take_while(|&c| c == '\n').count();
 

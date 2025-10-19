@@ -139,8 +139,11 @@ pub struct CardMetadata<'a> {
 }
 
 impl Debug for CardMetadata<'_> {
+    // Skip formatting to preserve visual alignment
+    #[rustfmt::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "CardMetadata {{")?;
+        writeln!(f, "  serial_num         : {}", (self.serial_num.map(|serial_num| serial_num.to_string()).unwrap_or("N/A".to_string())))?;
         writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
         writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
         writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
