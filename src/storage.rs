@@ -1,10 +1,15 @@
 use std::ffi::OsStr;
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::fs::{self};
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
 use std::io::Write;
 use std::ops::RangeInclusive;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -15,6 +20,7 @@ use markdown::ParseOptions;
 use markdown::mdast::Node;
 use markdown::mdast::{self};
 use markdown::to_mdast;
+use regex::Regex;
 
 use crate::output::CardBodyParts;
 use crate::output::format_card_storage;
@@ -226,6 +232,32 @@ fn strip_indent<'a>(
     lines.map(move |line| line.strip_prefix(indent).unwrap_or(line))
 }
 
+static CARD_SERIAL_NUM_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"#card( <!-- CSN:(?<csn>[0-9]+) -->)?").unwrap());
+
+fn extract_serial_num(prompt: &str) -> Option<u64> {
+    // If ever CSN is >u64 this will panic
+    CARD_SERIAL_NUM_RE.captures(prompt)?.name("csn").map(|m| m.as_str().parse::<u64>().unwrap())
+}
+
+fn maybe_allocate_serial_num(
+    card: &mut Card,
+    serial_num_allocator: &mut dyn CardSerialNumAllocator,
+) -> Result<()> {
+    if card.metadata.serial_num.is_some() {
+        return Ok(());
+    };
+    let Some(serial_num) = serial_num_allocator.allocate_and_get() else {
+        return Ok(());
+    };
+    let serial_num = serial_num?;
+    card.metadata.serial_num = Some(serial_num);
+    card.body.prompt = CARD_SERIAL_NUM_RE
+        .replace(&card.body.prompt, format!("#card <!-- CSN:{} -->", serial_num))
+        .to_string();
+    Ok(())
+}
+
 fn extract_card<'a>(
     card_list_item: &mdast::ListItem,
     path: &'a Path,
@@ -248,6 +280,7 @@ fn extract_card<'a>(
 
     Ok(Card {
         metadata: CardMetadata {
+            serial_num: extract_serial_num(&prompt),
             card_ref: CardRef { source_path: path, prompt_fingerprint: prompt.as_str().into() },
             prompt_prefix,
             srs_meta: SRSMeta::from_prompt_lines(prompt_lines)
@@ -303,7 +336,18 @@ pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
     ))
 }
 
-pub fn rewrite_card_srs_meta(card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<()> {
+pub trait CardSerialNumAllocator {
+    // None means we didn't attempt allocating a serial number,
+    // because it does not make sense in the given context.
+    fn allocate_and_get(&mut self) -> Option<Result<u64>>;
+}
+
+// TODO: wrap in an object
+pub fn rewrite_card_meta(
+    card_ref: &CardRef,
+    srs_meta: &SRSMeta,
+    serial_num_allocator: &mut dyn CardSerialNumAllocator,
+) -> Result<()> {
     let path = card_ref.source_path;
     let file_raw = fs::read_to_string(path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
@@ -312,27 +356,37 @@ pub fn rewrite_card_srs_meta(card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<(
 
     for li in card_list_items.as_slice() {
         let mut card = extract_card(li, path, &file_raw_lines)?;
-        card.metadata.srs_meta = srs_meta.clone();
-        if card.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
-            let (p_lines, l_lines) = find_card_ranges(li)?;
-            let mut f = File::create(path)?;
-
-            let pre_lines = &file_raw_lines[..p_lines.into_inner().0];
-            if !pre_lines.is_empty() {
-                f.write_all(pre_lines.join("\n").as_bytes())?;
-                f.write_all("\n".as_bytes())?;
-            }
-
-            format_card_storage(&card, &mut f, &CardBodyParts::All)?;
-
-            let post_lines = &file_raw_lines[l_lines.into_inner().1 + 1..];
-            if !post_lines.is_empty() {
-                f.write_all(post_lines.join("\n").as_bytes())?;
-                f.write_all("\n".as_bytes())?;
-            }
-
-            return Ok(());
+        if card.metadata.card_ref.prompt_fingerprint != card_ref.prompt_fingerprint {
+            continue;
         }
+
+        card.metadata.srs_meta = srs_meta.clone();
+        maybe_allocate_serial_num(&mut card, serial_num_allocator).with_context(|| {
+            anyhow!(
+                "could not allocate serial number for card in {} with fingerprint {}",
+                card_ref.source_path.display(),
+                card_ref.prompt_fingerprint
+            )
+        })?;
+
+        let (p_lines, l_lines) = find_card_ranges(li)?;
+        let mut f = File::create(path)?;
+
+        let pre_lines = &file_raw_lines[..p_lines.into_inner().0];
+        if !pre_lines.is_empty() {
+            f.write_all(pre_lines.join("\n").as_bytes())?;
+            f.write_all("\n".as_bytes())?;
+        }
+
+        format_card_storage(&card, &mut f, &CardBodyParts::All)?;
+
+        let post_lines = &file_raw_lines[l_lines.into_inner().1 + 1..];
+        if !post_lines.is_empty() {
+            f.write_all(post_lines.join("\n").as_bytes())?;
+            f.write_all("\n".as_bytes())?;
+        }
+
+        return Ok(());
     }
 
     Err(anyhow!(
@@ -342,13 +396,33 @@ pub fn rewrite_card_srs_meta(card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<(
     ))
 }
 
-pub fn find_page_files(path: &Path) -> Result<Vec<PathBuf>> {
+enum PageFiles {
+    Single(PathBuf),
+    SingleInGraphRoot(PathBuf, PathBuf),
+    GraphRoot(PathBuf, Vec<PathBuf>),
+}
+
+fn find_page_files_inner(path: &Path) -> Result<PageFiles> {
     if !path.exists() {
         return Err(anyhow!("{} does not exist", path.display()));
     }
+    // [ref:logseq-dir-layout]
     if !path.is_dir() {
-        return Ok(vec![path.to_owned()]);
+        let Some(parent) = path.parent() else { return Ok(PageFiles::Single(path.to_path_buf())) };
+        let parent_name = parent
+            .file_name()
+            .ok_or_else(|| anyhow!("parent of {} does not have a file name", path.display()))?;
+        if parent_name == "pages" {
+            // parent is definitely not root, so it definitely has a parent, unwrap is fine.
+            return Ok(PageFiles::SingleInGraphRoot(
+                parent.parent().unwrap().to_path_buf(),
+                path.to_path_buf(),
+            ));
+        } else {
+            return Ok(PageFiles::Single(path.to_path_buf()));
+        }
     };
+
     let pages_dir = path.join("pages");
     if !pages_dir.exists() {
         return Err(anyhow!(
@@ -361,5 +435,77 @@ pub fn find_page_files(path: &Path) -> Result<Vec<PathBuf>> {
         .map(|d| d.path())
         .filter(|p| p.is_file() && p.extension() == Some(OsStr::new("md")))
         .collect();
-    Ok(page_files)
+    Ok(PageFiles::GraphRoot(path.to_path_buf(), page_files))
+}
+
+pub fn find_graph_root(path: &Path) -> Result<Option<PathBuf>> {
+    match find_page_files_inner(path)? {
+        PageFiles::Single(_) => Ok(None),
+        PageFiles::SingleInGraphRoot(graph_root, _) => Ok(Some(graph_root)),
+        PageFiles::GraphRoot(graph_root, _) => Ok(Some(graph_root)),
+    }
+}
+
+pub fn find_page_files(path: &Path) -> Result<Vec<PathBuf>> {
+    match find_page_files_inner(path)? {
+        PageFiles::Single(page_path) => Ok(vec![page_path]),
+        PageFiles::SingleInGraphRoot(_, page_path) => Ok(vec![page_path]),
+        PageFiles::GraphRoot(_, page_paths) => Ok(page_paths),
+    }
+}
+
+struct NoOpSerialNumAllocator {}
+
+impl CardSerialNumAllocator for NoOpSerialNumAllocator {
+    fn allocate_and_get(&mut self) -> Option<Result<u64>> {
+        // Not attempted
+        None
+    }
+}
+
+struct GraphRootSerialNumAllocator {
+    graph_root: PathBuf,
+}
+
+impl GraphRootSerialNumAllocator {
+    fn allocate_and_get_inner(&mut self) -> Result<u64> {
+        let card_serial_num_path = self.graph_root.join(".card-serial");
+
+        if !card_serial_num_path.exists() {
+            let mut card_serial_num_file = File::create(card_serial_num_path)?;
+            card_serial_num_file.write_all(b"0")?;
+            return Ok(0);
+        }
+
+        let mut card_serial_num_file =
+            OpenOptions::new().read(true).write(true).open(&card_serial_num_path)?;
+
+        let mut card_serial_num_raw = String::new();
+        card_serial_num_file.read_to_string(&mut card_serial_num_raw)?;
+
+        let mut card_serial: u64 = card_serial_num_raw.parse()?;
+        card_serial += 1;
+
+        card_serial_num_file.seek(SeekFrom::Start(0))?;
+        card_serial_num_file.set_len(0)?;
+        card_serial_num_file.write_all(card_serial.to_string().as_bytes())?;
+
+        Ok(card_serial)
+    }
+}
+
+impl CardSerialNumAllocator for GraphRootSerialNumAllocator {
+    fn allocate_and_get(&mut self) -> Option<Result<u64>> {
+        Some(
+            self.allocate_and_get_inner()
+                .with_context(|| anyhow!("failed to read/write card serial number")),
+        )
+    }
+}
+
+pub fn choose_serial_num_allocator(path: &Path) -> Result<Box<dyn CardSerialNumAllocator>> {
+    let Some(graph_root) = find_graph_root(path)? else {
+        return Ok(Box::new(NoOpSerialNumAllocator {}));
+    };
+    Ok(Box::new(GraphRootSerialNumAllocator { graph_root }))
 }
