@@ -1,9 +1,9 @@
 ---
-source: tests/cli.rs
+source: tests/output.rs
 info:
   program: losrs
   args:
-    - "--config=/tmp/.tmpGoKMCZ/losrs.toml"
+    - "--config=[TMP_DIR]/losrs.toml"
     - review
     - "--help"
   envs: {}
