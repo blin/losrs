@@ -17,12 +17,12 @@ static TMP_DIR_RE: LazyLock<Regex> =
 
 pub fn redacted_args(cmd: &Command) -> Vec<String> {
     cmd.get_args()
-        .map(|x| TMP_DIR_RE.replace(&x.to_string_lossy(), "[TMP_DIR]").to_string())
+        .map(|x| TMP_DIR_RE.replace_all(&x.to_string_lossy(), "[TMP_DIR]").to_string())
         .collect()
 }
 
 pub fn redacted_text(out: &str) -> String {
-    TMP_DIR_RE.replace(out, "[TMP_DIR]").to_string()
+    TMP_DIR_RE.replace_all(out, "[TMP_DIR]").to_string()
 }
 
 pub fn build_args(args: &[&str], pages: &[&str]) -> Result<(tempfile::TempDir, Vec<String>)> {

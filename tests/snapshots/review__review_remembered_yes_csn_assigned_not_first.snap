@@ -9,7 +9,7 @@ info:
     - "--at=2025-11-22T15:04:05.123456789Z"
   page_lines:
     - "- Not card"
-    - "- What is a sphere? #card"
+    - "- What is a sphere? #card <!-- CSN:3 -->"
     - "  card-last-interval:: 244.14"
     - "  card-repeats:: 6"
     - "  card-ease-factor:: 3.1"
@@ -23,16 +23,18 @@ info:
     - - expected type of interaction
       - review
     - - remembered
-      - "false"
+      - "true"
+    - - last_serial_num
+      - "5"
 ---
 - Not card
-- What is a sphere? #card <!-- CSN:0 -->
-  card-last-interval:: 9
+- What is a sphere? #card <!-- CSN:3 -->
+  card-last-interval:: 606
   card-repeats:: 7
   card-ease-factor:: 2.5
-  card-next-schedule:: 2025-12-01T15:04:05.123Z
+  card-next-schedule:: 2027-07-21T15:04:05.123Z
   card-last-reviewed:: 2025-11-22T15:04:05.123Z
   card-last-score:: 5
-  card-fsrs-metadata:: {"due":"2025-12-01T15:04:05.123Z","stability":8.774,"difficulty":7.04,"elapsed_days":245,"scheduled_days":9,"reps":7,"lapses":1,"state":"Review","last_review":"2025-11-22T15:04:05.123Z"}
+  card-fsrs-metadata:: {"due":"2027-07-21T15:04:05.123Z","stability":605.916,"difficulty":4.96,"elapsed_days":245,"scheduled_days":606,"reps":7,"lapses":0,"state":"Review","last_review":"2025-11-22T15:04:05.123Z"}
   - Set of points in a 3 dimensional space that are equidistant from a center point.
 - Not card
