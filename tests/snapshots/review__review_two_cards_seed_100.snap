@@ -31,7 +31,7 @@ info:
     - ""
   interaction_meta:
     - - expected type of interaction
-      - "review first card, then nope out"
+      - "review first card, then second card"
     - - first card with given seed
       - "What is Gregg Simplified for \"N\" (description)?"
 ---
@@ -46,12 +46,13 @@ info:
     card-last-score:: 5
     card-fsrs-metadata:: {"due":"2025-12-30T15:04:05.123Z","stability":120.037,"difficulty":4.96,"elapsed_days":59,"scheduled_days":120,"reps":5,"lapses":0,"state":"Review","last_review":"2025-09-01T15:04:05.123Z"}
     - forward short stroke
-  - What is Gregg Simplified for "M" (description)? #card
-    card-last-interval:: 15.0
-    card-repeats:: 4
-    card-ease-factor:: 1.0
-    card-next-schedule:: 2025-08-12T09:03:05.489Z
-    card-last-reviewed:: 2025-07-04T09:03:05.489Z
-    card-last-score:: 1
+  - What is Gregg Simplified for "M" (description)? #card <!-- CSN:1 -->
+    card-last-interval:: 120
+    card-repeats:: 5
+    card-ease-factor:: 2.5
+    card-next-schedule:: 2025-12-30T15:04:05.123Z
+    card-last-reviewed:: 2025-09-01T15:04:05.123Z
+    card-last-score:: 5
+    card-fsrs-metadata:: {"due":"2025-12-30T15:04:05.123Z","stability":120.037,"difficulty":4.96,"elapsed_days":59,"scheduled_days":120,"reps":5,"lapses":0,"state":"Review","last_review":"2025-09-01T15:04:05.123Z"}
     - forward long stroke
 - Not card
