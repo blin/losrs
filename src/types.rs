@@ -32,6 +32,7 @@ impl From<&str> for Fingerprint {
 // Some considerations
 // * I want to be able to hold all card metadata in memory, without holding all card data in memory
 // * I want to be able to load one card at a time and immediately store it back modified
+// * If a card has just been added it will not have a serial number assigned, so we need to use something else when writing back
 // * source_path is potentially used in lots of cards, avoid copying it
 pub struct CardRef<'a> {
     pub source_path: &'a Path,
@@ -129,14 +130,20 @@ pub struct SRSMeta {
 }
 
 pub struct CardMetadata<'a> {
+    // serial_num is potentilaly unset at read time,
+    // we populate only before writing to avoid wasting serial numbers.
+    pub serial_num: Option<u64>,
     pub card_ref: CardRef<'a>,
     pub prompt_prefix: String,
     pub srs_meta: SRSMeta,
 }
 
 impl Debug for CardMetadata<'_> {
+    // Skip formatting to preserve visual alignment
+    #[rustfmt::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "CardMetadata {{")?;
+        writeln!(f, "  serial_num         : {}", self.serial_num.map(|serial_num| serial_num.to_string()).unwrap_or("N/A".to_string()))?;
         writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
         writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
         writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;

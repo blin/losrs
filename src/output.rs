@@ -101,7 +101,7 @@ fn card_to_png(
     let typst = markdown_to_typst(markdown)
         .with_context(|| "failed to convert markdown to typst using pandoc".to_owned())?;
 
-    // standard logseq layout is
+    // [tag:logseq-dir-layout]
     //
     // graph_root
     // ├── assets
