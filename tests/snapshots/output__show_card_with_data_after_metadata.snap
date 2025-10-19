@@ -1,10 +1,11 @@
 ---
-source: tests/cli.rs
+source: tests/output.rs
 info:
   program: losrs
   args:
+    - "--config=[TMP_DIR]/losrs.toml"
     - show
-    - /tmp/.tmpGPlb1b
+    - "[TMP_DIR]"
   envs: {}
   page_lines:
     - - "- Not card"
