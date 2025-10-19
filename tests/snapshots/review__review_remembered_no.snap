@@ -26,7 +26,7 @@ info:
       - "false"
 ---
 - Not card
-- What is a sphere? #card
+- What is a sphere? #card <!-- CSN:0 -->
   card-last-interval:: 9
   card-repeats:: 7
   card-ease-factor:: 2.5

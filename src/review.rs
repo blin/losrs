@@ -10,8 +10,9 @@ use rs_fsrs::Rating;
 use crate::output::show_card;
 use crate::output::show_card_prompt;
 use crate::settings::OutputSettings;
+use crate::storage::CardSerialNumAllocator;
 use crate::storage::extract_card_by_ref;
-use crate::storage::rewrite_card_srs_meta;
+use crate::storage::rewrite_card_meta;
 use crate::terminal::ReviewResponse;
 use crate::terminal::clear_screen;
 use crate::terminal::wait_for_anykey;
@@ -70,6 +71,7 @@ pub fn review_card(
     cm: &CardMetadata,
     reviewed_at: DateTime<FixedOffset>,
     output_settings: &OutputSettings,
+    serial_num_allocator: &mut dyn CardSerialNumAllocator,
 ) -> Result<()> {
     // We construct ReviewableFSRSMeta early so as to not require user action
     // if card is unreviewable.
@@ -113,7 +115,7 @@ pub fn review_card(
     let review_response = wait_for_review()?;
     let next_srs_meta = compute_next_srs_meta(&reviewable_fsrs_meta, &review_response);
 
-    rewrite_card_srs_meta(&card.metadata.card_ref, &next_srs_meta)?;
+    rewrite_card_meta(&card.metadata.card_ref, &next_srs_meta, serial_num_allocator)?;
 
     Ok(())
 }
