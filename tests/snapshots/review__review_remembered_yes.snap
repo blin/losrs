@@ -1,10 +1,11 @@
 ---
-source: tests/cli.rs
+source: tests/review.rs
 info:
   program: losrs
   args:
+    - "--config=/tmp/.tmp68AgVh/losrs.toml"
     - review
-    - /tmp/.tmp2jSdS0
+    - /tmp/.tmp68AgVh
     - "--at=2025-11-22T15:04:05.123456789Z"
   page_lines:
     - "- Not card"
@@ -19,11 +20,11 @@ info:
     - "- Not card"
     - ""
   interaction_meta:
-    expected type of interaction: review
     remembered: "true"
+    expected type of interaction: review
 ---
 - Not card
-- What is a sphere? #card
+- What is a sphere? #card <!-- CSN:0 -->
   card-last-interval:: 606
   card-repeats:: 7
   card-ease-factor:: 2.5

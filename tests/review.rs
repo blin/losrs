@@ -423,6 +423,92 @@ test_card_review!(
     }
 );
 
+test_card_review!(
+    review_two_cards_seed_0,
+    TestCardReviewParams {
+        args: vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=0"],
+        page: r#"- Not card
+- Alphabet forward cards
+  - What is Gregg Simplified for "N" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward short stroke
+  - What is Gregg Simplified for "M" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward long stroke
+- Not card
+"#,
+        f: |p: &mut PtySession| -> Result<()> {
+            expect_review_interaction(p, true)?;
+            expect_review_interaction(p, true)?;
+            Ok(())
+        },
+        interaction_meta: HashMap::from([
+            (
+                "expected type of interaction".to_string(),
+                "review first card, then second card".to_string()
+            ),
+            (
+                "first card with given seed".to_string(),
+                r#"What is Gregg Simplified for "M" (description)?"#.to_string()
+            ),
+        ]),
+        expected_code: 0
+    }
+);
+
+test_card_review!(
+    review_two_cards_seed_100,
+    TestCardReviewParams {
+        args: vec!["--at=2025-09-01T15:04:05.123456789Z", "--seed=100"],
+        page: r#"- Not card
+- Alphabet forward cards
+  - What is Gregg Simplified for "N" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward short stroke
+  - What is Gregg Simplified for "M" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward long stroke
+- Not card
+"#,
+        f: |p: &mut PtySession| -> Result<()> {
+            expect_review_interaction(p, true)?;
+            expect_review_interaction(p, true)?;
+            Ok(())
+        },
+        interaction_meta: HashMap::from([
+            (
+                "expected type of interaction".to_string(),
+                "review first card, then second card".to_string()
+            ),
+            (
+                "first card with given seed".to_string(),
+                r#"What is Gregg Simplified for "N" (description)?"#.to_string()
+            ),
+        ]),
+        expected_code: 0
+    }
+);
+
 #[test]
 fn newline_writeback_on_review() -> Result<()> {
     let args = vec!["review", "$GRAPH_ROOT", "--at=2025-11-22T15:04:05.123456789Z"];
@@ -457,3 +543,8 @@ fn newline_writeback_on_review() -> Result<()> {
 
     Ok(())
 }
+
+// TODO: test review outside graph root
+// TODO: display serial number via metadata command
+// TODO: redact TMP_DIR in cmd_info
+// TODO: use Vec<(String, String)> instead of HashMap<String, String> for interaction meta for stable order
