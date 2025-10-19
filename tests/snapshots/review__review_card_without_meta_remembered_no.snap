@@ -1,10 +1,11 @@
 ---
-source: tests/cli.rs
+source: tests/review.rs
 info:
   program: losrs
   args:
+    - "--config=/tmp/.tmpf4bKMP/losrs.toml"
     - review
-    - /tmp/.tmphudQTy
+    - /tmp/.tmpf4bKMP
     - "--at=2025-11-22T15:04:05.123456789Z"
   page_lines:
     - "- Not card"
@@ -17,7 +18,7 @@ info:
     remembered: "false"
 ---
 - Not card
-- What is a sphere? #card
+- What is a sphere? #card <!-- CSN:0 -->
   card-last-interval:: 1
   card-repeats:: 1
   card-ease-factor:: 2.5
