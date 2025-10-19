@@ -543,3 +543,8 @@ fn newline_writeback_on_review() -> Result<()> {
 
     Ok(())
 }
+
+// TODO: test review outside graph root
+// TODO: display serial number via metadata command
+// TODO: redact TMP_DIR in cmd_info
+// TODO: use Vec<(String, String)> instead of HashMap<String, String> for interaction meta for stable order
