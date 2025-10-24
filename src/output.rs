@@ -120,11 +120,11 @@ fn card_to_png(
     //     ├── ...
     //
     // So to get graph_root we need to go up twice
-    let page_path = card.metadata.card_ref.source_path;
-    let graph_root = page_path.parent().and_then(Path::parent).ok_or(anyhow!(
-        "page file does not have a grandparent. The page is {}",
-        page_path.display()
-    ))?;
+    let graph_root =
+        card.metadata.card_ref.source_path.parent().and_then(Path::parent).ok_or(anyhow!(
+            "page file does not have a grandparent. The page is {}",
+            card.metadata.card_ref.source_path.display()
+        ))?;
 
     let png_buf = typst_to_png(typst, graph_root, output_settings)
         .with_context(|| "failed to convert typst to png via typst cli".to_owned())?;

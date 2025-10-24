@@ -1,5 +1,6 @@
 use std::fmt::Debug;
-use std::path::Path;
+use std::path::PathBuf;
+use std::rc::Rc;
 
 use chrono::DateTime;
 use chrono::FixedOffset;
@@ -34,8 +35,8 @@ impl From<&str> for Fingerprint {
 // * I want to be able to load one card at a time and immediately store it back modified
 // * If a card has just been added it will not have a serial number assigned, so we need to use something else when writing back
 // * source_path is potentially used in lots of cards, avoid copying it
-pub struct CardRef<'a> {
-    pub source_path: &'a Path,
+pub struct CardRef {
+    pub source_path: Rc<PathBuf>,
     // prompt_fingerprint is XXH3 64 and will remain valid within the version of the crate,
     // but not necessarily accross.
     // The intended use is to list a set of cards, then immediately act on them one by one.
@@ -132,13 +133,13 @@ pub struct SRSMeta {
     pub fsrs_meta: FSRSMeta,
 }
 
-pub struct CardMetadata<'a> {
-    pub card_ref: CardRef<'a>,
+pub struct CardMetadata {
+    pub card_ref: CardRef,
     pub prompt_prefix: String,
     pub srs_meta: SRSMeta,
 }
 
-impl Debug for CardMetadata<'_> {
+impl Debug for CardMetadata {
     // Skip formatting to preserve visual alignment
     #[rustfmt::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -164,7 +165,7 @@ pub struct CardBody {
     pub response: String,
 }
 
-pub struct Card<'a> {
-    pub metadata: CardMetadata<'a>,
+pub struct Card {
+    pub metadata: CardMetadata,
     pub body: CardBody,
 }
