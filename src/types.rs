@@ -40,6 +40,9 @@ pub struct CardRef<'a> {
     // but not necessarily accross.
     // The intended use is to list a set of cards, then immediately act on them one by one.
     pub prompt_fingerprint: Fingerprint,
+    // serial_num is potentilaly unset at read time,
+    // we populate only before writing to avoid wasting serial numbers.
+    pub serial_num: Option<u64>,
 }
 
 // Logseq standard format:
@@ -130,9 +133,6 @@ pub struct SRSMeta {
 }
 
 pub struct CardMetadata<'a> {
-    // serial_num is potentilaly unset at read time,
-    // we populate only before writing to avoid wasting serial numbers.
-    pub serial_num: Option<u64>,
     pub card_ref: CardRef<'a>,
     pub prompt_prefix: String,
     pub srs_meta: SRSMeta,
@@ -143,7 +143,7 @@ impl Debug for CardMetadata<'_> {
     #[rustfmt::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "CardMetadata {{")?;
-        writeln!(f, "  serial_num         : {}", self.serial_num.map(|serial_num| serial_num.to_string()).unwrap_or("N/A".to_string()))?;
+        writeln!(f, "  serial_num         : {}", self.card_ref.serial_num.map(|serial_num| serial_num.to_string()).unwrap_or("N/A".to_string()))?;
         writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
         writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
         writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
