@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -123,19 +124,14 @@ enum ConfigCommands {
     Path,
 }
 
-fn act_on_card_ref<F>(path: &Path, card_id: Option<CardId>, mut f: F) -> Result<()>
-where
-    F: FnMut(&mut Vec<CardMetadata>) -> Result<()>,
-{
-    // The complexity in act_on_card_ref is introduced so that PathBufs from page_files
-    // outlive CardMetadatas from all_card_metadatas, which refer to these PathBufs.
-    // There is probably a better way to do this.
+fn select_card_metadata(path: &Path, card_id: Option<CardId>) -> Result<Vec<CardMetadata>> {
     let page_files: Vec<PathBuf> = find_page_files(path)?;
     let mut all_card_metadatas: Vec<CardMetadata> = Vec::new();
-    for page_file in page_files.iter() {
-        let mut card_metadatas = extract_card_metadatas(page_file).with_context(|| {
-            format!("when extracting card metadatas from {}", page_file.display())
-        })?;
+    for page_file in page_files.into_iter() {
+        // avoid copying page_file just so we can print it later
+        let context = format!("when extracting card metadatas from {}", &page_file.display());
+        let mut card_metadatas =
+            extract_card_metadatas(Rc::new(page_file)).with_context(|| context)?;
 
         if let Some(card_id) = card_id.clone() {
             let p: Box<dyn Fn(&CardMetadata) -> bool> = match &card_id {
@@ -150,8 +146,7 @@ where
         }
         all_card_metadatas.extend(card_metadatas);
     }
-    f(&mut all_card_metadatas)?;
-    Ok(())
+    Ok(all_card_metadatas)
 }
 
 fn shuffle_slice<T>(s: &mut [T], seed: u64) {
@@ -169,10 +164,10 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Show { card_ref: CardRefArgs { path, card_id } } => {
             let output_settings = settings.output;
-            act_on_card_ref(&path, card_id, |card_metas| {
-                card_metas.sort_by(|a, b| a.card_ref.source_path.cmp(b.card_ref.source_path));
-                for cm in card_metas {
-                    let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
+            let mut card_metas = select_card_metadata(&path, card_id)?;
+            card_metas.sort_by(|a, b| a.card_ref.source_path.cmp(&b.card_ref.source_path));
+            for cm in card_metas {
+                let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
                         format!(
                             "When extracting card with fingerprint {} from {}, card with prompt prefix: {}",
                             cm.card_ref.prompt_fingerprint,
@@ -180,10 +175,8 @@ fn main() -> Result<()> {
                             cm.prompt_prefix
                         )
                     })?;
-                    show_card(&card, &output_settings)?
-                }
-                Ok(())
-            })?;
+                show_card(&card, &output_settings)?
+            }
         }
         Commands::Review { card_ref: CardRefArgs { path, card_id }, at, up_to, seed } => {
             let mut serial_num_allocator = choose_serial_num_allocator(&path)?;
@@ -196,14 +189,15 @@ fn main() -> Result<()> {
                 (Some(at), Some(up_to)) => (at, up_to),
             };
 
-            match act_on_card_ref(&path, card_id, |card_metas| {
+            let mut card_metas = select_card_metadata(&path, card_id)?;
+            match (|| -> Result<()> {
                 card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= up_to);
-                shuffle_slice(card_metas, seed.unwrap_or_default());
+                shuffle_slice(&mut card_metas, seed.unwrap_or_default());
                 for cm in card_metas {
-                    review::review_card(cm, at, &output_settings, serial_num_allocator.as_mut())?
+                    review::review_card(&cm, at, &output_settings, serial_num_allocator.as_mut())?
                 }
                 Ok(())
-            }) {
+            })() {
                 Ok(_) => println!("Reviewed all cards, huzzah!"),
                 Err(err) => match err.downcast_ref::<terminal::NopeOutError>() {
                     Some(e) => println!("{}", e),
@@ -212,26 +206,22 @@ fn main() -> Result<()> {
             }
         }
         Commands::Metadata { card_ref: CardRefArgs { path, card_id } } => {
-            act_on_card_ref(&path, card_id, |card_metas| {
-                for cm in card_metas {
-                    output::show_metadata(cm)?;
-                }
-                Ok(())
-            })?;
+            let card_metas = select_card_metadata(&path, card_id)?;
+            for cm in card_metas {
+                output::show_metadata(&cm)?;
+            }
         }
         Commands::FixMetadata { card_ref: CardRefArgs { path, card_id } } => {
             let mut serial_num_allocator = choose_serial_num_allocator(&path)?;
-            act_on_card_ref(&path, card_id, |card_metas| {
-                for cm in card_metas {
-                    // TODO: detect cards that are in the same file with the same fingerprint and nope out
-                    storage::rewrite_card_meta(
-                        &cm.card_ref,
-                        &cm.srs_meta,
-                        serial_num_allocator.as_mut(),
-                    )?;
-                }
-                Ok(())
-            })?;
+            let card_metas = select_card_metadata(&path, card_id)?;
+            for cm in card_metas {
+                // TODO: detect cards that are in the same file with the same fingerprint and nope out
+                storage::rewrite_card_meta(
+                    &cm.card_ref,
+                    &cm.srs_meta,
+                    serial_num_allocator.as_mut(),
+                )?;
+            }
         }
         Commands::Config { command } => match command {
             ConfigCommands::Show => {

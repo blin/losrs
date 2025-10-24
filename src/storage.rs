@@ -9,6 +9,7 @@ use std::io::Write;
 use std::ops::RangeInclusive;
 use std::path::Path;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::LazyLock;
 
 use anyhow::Context;
@@ -258,11 +259,11 @@ fn maybe_allocate_serial_num(
     Ok(())
 }
 
-fn extract_card<'a>(
+fn extract_card(
     card_list_item: &mdast::ListItem,
-    path: &'a Path,
+    path: Rc<PathBuf>,
     file_raw_lines: &[&str],
-) -> Result<Card<'a>> {
+) -> Result<Card> {
     let (prompt_lines, response_lines) = destructure_card(card_list_item, file_raw_lines)?;
 
     let prompt_line_first = prompt_lines.first().unwrap_or(&"").to_owned().trim_end();
@@ -293,8 +294,8 @@ fn extract_card<'a>(
     })
 }
 
-pub fn extract_card_metadatas<'a>(path: &'a Path) -> Result<Vec<CardMetadata<'a>>> {
-    let file_raw = fs::read_to_string(path)?;
+pub fn extract_card_metadatas(path: Rc<PathBuf>) -> Result<Vec<CardMetadata>> {
+    let file_raw = fs::read_to_string(&*path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
 
     let card_list_items = find_card_list_items(&file_raw)
@@ -303,7 +304,7 @@ pub fn extract_card_metadatas<'a>(path: &'a Path) -> Result<Vec<CardMetadata<'a>
     let cards = card_list_items
         .iter()
         .map(|li| {
-            extract_card(li, path, &file_raw_lines).with_context(|| {
+            extract_card(li, path.clone(), &file_raw_lines).with_context(|| {
                 anyhow!(
                     "when extracting a card from list item on line {}",
                     li.position
@@ -319,15 +320,14 @@ pub fn extract_card_metadatas<'a>(path: &'a Path) -> Result<Vec<CardMetadata<'a>
     Ok(card_metadatas)
 }
 
-pub fn extract_card_by_ref<'a>(card_ref: &CardRef<'a>) -> Result<Card<'a>> {
-    let path = card_ref.source_path;
-    let file_raw = fs::read_to_string(path)?;
+pub fn extract_card_by_ref(card_ref: &CardRef) -> Result<Card> {
+    let file_raw = fs::read_to_string(&*card_ref.source_path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
 
     let card_list_items = find_card_list_items(&file_raw)?;
 
     for li in card_list_items.as_slice() {
-        let c = extract_card(li, path, &file_raw_lines)?;
+        let c = extract_card(li, card_ref.source_path.clone(), &file_raw_lines)?;
         if c.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
             return Ok(c);
         }
@@ -351,14 +351,13 @@ pub fn rewrite_card_meta(
     srs_meta: &SRSMeta,
     serial_num_allocator: &mut dyn CardSerialNumAllocator,
 ) -> Result<()> {
-    let path = card_ref.source_path;
-    let file_raw = fs::read_to_string(path)?;
+    let file_raw = fs::read_to_string(&*card_ref.source_path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
 
     let card_list_items = find_card_list_items(&file_raw)?;
 
     for li in card_list_items.as_slice() {
-        let mut card = extract_card(li, path, &file_raw_lines)?;
+        let mut card = extract_card(li, card_ref.source_path.clone(), &file_raw_lines)?;
         if card.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
             card.metadata.srs_meta = srs_meta.clone();
             maybe_allocate_serial_num(&mut card, serial_num_allocator).with_context(|| {
@@ -370,7 +369,7 @@ pub fn rewrite_card_meta(
             })?;
 
             let (p_lines, l_lines) = find_card_ranges(li)?;
-            let mut f = File::create(path)?;
+            let mut f = File::create(&*card_ref.source_path)?;
 
             let pre_lines = &file_raw_lines[..p_lines.into_inner().0];
             if !pre_lines.is_empty() {
