@@ -143,7 +143,7 @@ where
                     Box::new(|cm: &CardMetadata| cm.card_ref.prompt_fingerprint == *fingerprint)
                 }
                 CardId::SerialNum(serial_num) => {
-                    Box::new(|cm: &CardMetadata| cm.serial_num == Some(*serial_num))
+                    Box::new(|cm: &CardMetadata| cm.card_ref.serial_num == Some(*serial_num))
                 }
             };
             card_metadatas.retain(p);

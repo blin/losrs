@@ -244,14 +244,14 @@ fn maybe_allocate_serial_num(
     card: &mut Card,
     serial_num_allocator: &mut dyn CardSerialNumAllocator,
 ) -> Result<()> {
-    if card.metadata.serial_num.is_some() {
+    if card.metadata.card_ref.serial_num.is_some() {
         return Ok(());
     };
     let Some(serial_num) = serial_num_allocator.allocate() else {
         return Ok(());
     };
     let serial_num = serial_num?;
-    card.metadata.serial_num = Some(serial_num);
+    card.metadata.card_ref.serial_num = Some(serial_num);
     card.body.prompt = CARD_SERIAL_NUM_RE
         .replace(&card.body.prompt, format!("#card <!-- CSN:{} -->", serial_num))
         .to_string();
@@ -280,8 +280,11 @@ fn extract_card<'a>(
 
     Ok(Card {
         metadata: CardMetadata {
-            serial_num: extract_serial_num(&prompt),
-            card_ref: CardRef { source_path: path, prompt_fingerprint: prompt.as_str().into() },
+            card_ref: CardRef {
+                source_path: path,
+                prompt_fingerprint: prompt.as_str().into(),
+                serial_num: extract_serial_num(&prompt),
+            },
             prompt_prefix,
             srs_meta: SRSMeta::from_prompt_lines(prompt_lines)
                 .with_context(|| "when extracting SRS meta")?,
