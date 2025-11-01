@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use anyhow::anyhow;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -42,30 +41,7 @@ impl Settings {
     }
 
     pub fn get_config_path() -> Result<PathBuf> {
-        Self::get_configuration_file_path("losrs", "losrs")
-    }
-
-    // Inlining code from https://github.com/rust-cli/confy/pull/119 until it is merged.
-    fn get_configuration_file_path<'a>(
-        app_name: &str,
-        config_name: impl Into<Option<&'a str>>,
-    ) -> Result<PathBuf> {
-        use etcetera::AppStrategy;
-        use etcetera::AppStrategyArgs;
-        use etcetera::app_strategy::choose_app_strategy;
-        let config_name = config_name.into().unwrap_or("default-config");
-        let project = choose_app_strategy(AppStrategyArgs {
-            top_level_domain: "rs".to_string(),
-            author: "".to_string(),
-            app_name: app_name.to_string(),
-        })
-        .map_err(|e| anyhow!(format!("could not determine home directory path: {e}")))?;
-
-        let config_dir_str = project.config_dir().display().to_string();
-
-        let path = [config_dir_str, format!("{config_name}.toml")].iter().collect();
-
-        Ok(path)
+        Ok(confy::get_configuration_file_path("losrs", "losrs")?)
     }
 }
 
