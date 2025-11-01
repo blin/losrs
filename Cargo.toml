@@ -10,9 +10,8 @@ chrono = "0.4.41"
 clap = { version = "4.5.40", features = ["derive"] }
 clap-verbosity-flag = "3.0.3"
 config = { version = "0.15.14", default-features = false, features = ["toml"] }
-confy = "1.0.0"
+confy = "2.0.0"
 crossterm = "0.29.0"
-etcetera = "0.10.0"
 image = { version = "0.25.6", default-features = false, features = ["png"] }
 markdown = "1.0.0"
 rand = { version = "0.9.1", default-features = false, features = ["small_rng"] }
