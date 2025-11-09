@@ -18,6 +18,12 @@ impl std::fmt::Display for Fingerprint {
     }
 }
 
+impl std::fmt::Debug for Fingerprint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(self, f)
+    }
+}
+
 impl From<u64> for Fingerprint {
     fn from(value: u64) -> Self {
         Fingerprint(value)
@@ -35,7 +41,7 @@ impl From<&str> for Fingerprint {
 // * I want to be able to load one card at a time and immediately store it back modified
 // * If a card has just been added it will not have a serial number assigned, so we need to use something else when writing back
 // * source_path is potentially used in lots of cards, avoid copying it
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CardRef {
     pub source_path: Rc<PathBuf>,
     // prompt_fingerprint is XXH3 64 and will remain valid within the version of the crate,
