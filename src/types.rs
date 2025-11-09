@@ -35,6 +35,7 @@ impl From<&str> for Fingerprint {
 // * I want to be able to load one card at a time and immediately store it back modified
 // * If a card has just been added it will not have a serial number assigned, so we need to use something else when writing back
 // * source_path is potentially used in lots of cards, avoid copying it
+#[derive(Clone)]
 pub struct CardRef {
     pub source_path: Rc<PathBuf>,
     // prompt_fingerprint is XXH3 64 and will remain valid within the version of the crate,
@@ -133,6 +134,7 @@ pub struct SRSMeta {
     pub fsrs_meta: FSRSMeta,
 }
 
+#[derive(Clone)]
 pub struct CardMetadata {
     pub card_ref: CardRef,
     pub srs_meta: SRSMeta,
