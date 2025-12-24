@@ -1,0 +1,18 @@
+-- steps/01_action_name --
+RunLosrs
+-- steps/01_action_args --
+review --help
+-- steps/01_expected_stdout --
+Review cards
+
+Usage: losrs review [OPTIONS] <PATH> [CARD_ID]
+
+Arguments:
+  <PATH>     The path to the page file or graph root directory
+  [CARD_ID]  Card's serial number or fingerprint of the card's prompt. Use `metadata` command to find either
+
+Options:
+      --at <TIMESTAMP>     RFC3999 timestamp to use as the time of the review. Affects updating
+      --up-to <TIMESTAMP>  RFC3999 timestamp to use as an upper bound on due time. Affects selection
+      --seed <SEED>        Seed used for shuffling cards ready to be reviewed
+  -h, --help               Print help
