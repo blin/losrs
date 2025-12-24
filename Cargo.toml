@@ -24,9 +24,11 @@ viuer = { version = "0.9.2", default-features = false }
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 
 [dev-dependencies]
+dissimilar = "1.0.10"
 insta = { version = "1.43.1", features = ["filters"] }
 insta-cmd = "0.6.0"
 rexpect = "0.6.2"
+txtar = "1.0.0"
 
 [profile.dev.package]
 insta.opt-level = 3

@@ -1,0 +1,26 @@
+-- losrs.toml --
+
+-- pages/Angles.md --
+- Not card
+- Какова связь между углами $\\alpha$ и $\\gamma_{1}$ на изображении относительно секущей?
+  card-last-interval:: 30.0
+  card-repeats:: 6
+  card-ease-factor:: 2.5
+  card-next-schedule:: 2026-01-01T00:00:00.000Z
+  card-last-reviewed:: 2025-12-02T00:00:00.000Z
+  card-last-score:: 5
+  https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Transverzala_8.svg/262px-Transverzala_8.svg.png
+  #card
+  - Они накрест лежащие.
+- Not card
+-- steps/01_action_name --
+RunLosrs
+-- steps/01_action_args --
+show $GRAPH_ROOT
+-- steps/01_action_envs --
+LOSRS__OUTPUT__FORMAT=clean
+-- steps/01_expected_stdout --
+- Какова связь между углами $\\alpha$ и $\\gamma_{1}$ на изображении относительно секущей?
+  https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Transverzala_8.svg/262px-Transverzala_8.svg.png
+  #card
+  - Они накрест лежащие.
