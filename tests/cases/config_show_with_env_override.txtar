@@ -1,0 +1,21 @@
+-- losrs.toml --
+[output]
+format = "clean"
+ppi = 96.0
+base_font_size = 12
+line_height_scaling = 1.2
+-- steps/01_action_name --
+RunLosrs
+-- steps/01_action_args --
+config show
+-- steps/01_action_envs --
+LOSRS__OUTPUT__FORMAT=typst
+-- steps/01_expected_stdout --
+{
+  "output": {
+    "format": "typst",
+    "ppi": 96.0,
+    "base_font_size": 12,
+    "line_height_scaling": 1.2
+  }
+}
