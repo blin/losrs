@@ -4,13 +4,11 @@ use std::process::Command;
 use anyhow::Result;
 use serde::Serialize;
 
-use crate::common::build_args;
-use crate::common::construct_command;
-use crate::common::insta_cmd_describe_program;
-use crate::common::redacted_args;
-use crate::common::redacted_text;
-
-mod common;
+use test_utils::build_args;
+use test_utils::construct_command;
+use test_utils::insta_cmd_describe_program;
+use test_utils::redacted_args;
+use test_utils::redacted_text;
 
 #[derive(Serialize)]
 pub struct Info {
