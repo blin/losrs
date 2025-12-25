@@ -1,17 +1,8 @@
----
-source: tests/output.rs
-info:
-  program: losrs
-  args:
-    - "--config=[TMP_DIR]/losrs.toml"
-    - "--help"
-  envs: {}
-  page_lines:
-    - - ""
----
-success: true
-exit_code: 0
------ stdout -----
+-- steps/01_action_name --
+RunLosrs
+-- steps/01_action_args --
+--help
+-- steps/01_expected_stdout --
 Work with Spaced Repetition System (SRS) cards embedded in Logseq pages
 
 Usage: losrs [OPTIONS] <COMMAND>
@@ -27,5 +18,3 @@ Commands:
 Options:
       --config <CONFIG>  Override path to the config file. Use `config path` command to find the default path
   -h, --help             Print help
-
------ stderr -----

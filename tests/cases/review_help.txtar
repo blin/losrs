@@ -1,18 +1,8 @@
----
-source: tests/output.rs
-info:
-  program: losrs
-  args:
-    - "--config=[TMP_DIR]/losrs.toml"
-    - review
-    - "--help"
-  envs: {}
-  page_lines:
-    - - ""
----
-success: true
-exit_code: 0
------ stdout -----
+-- steps/01_action_name --
+RunLosrs
+-- steps/01_action_args --
+review --help
+-- steps/01_expected_stdout --
 Review cards
 
 Usage: losrs review [OPTIONS] <PATH> [CARD_ID]
@@ -26,5 +16,3 @@ Options:
       --up-to <TIMESTAMP>  RFC3999 timestamp to use as an upper bound on due time. Affects selection
       --seed <SEED>        Seed used for shuffling cards ready to be reviewed
   -h, --help               Print help
-
------ stderr -----

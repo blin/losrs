@@ -1,18 +1,8 @@
----
-source: tests/output.rs
-info:
-  program: losrs
-  args:
-    - "--config=[TMP_DIR]/losrs.toml"
-    - show
-    - "--help"
-  envs: {}
-  page_lines:
-    - - ""
----
-success: true
-exit_code: 0
------ stdout -----
+-- steps/01_action_name --
+RunLosrs
+-- steps/01_action_args --
+show --help
+-- steps/01_expected_stdout --
 Print cards
 
 Usage: losrs show <PATH> [CARD_ID]
@@ -23,5 +13,3 @@ Arguments:
 
 Options:
   -h, --help  Print help
-
------ stderr -----

@@ -1,18 +1,8 @@
----
-source: tests/output.rs
-info:
-  program: losrs
-  args:
-    - "--config=[TMP_DIR]/losrs.toml"
-    - config
-    - "--help"
-  envs: {}
-  page_lines:
-    - - ""
----
-success: true
-exit_code: 0
------ stdout -----
+-- steps/01_action_name --
+RunLosrs
+-- steps/01_action_args --
+config --help
+-- steps/01_expected_stdout --
 Manage configuration
 
 Usage: losrs config <COMMAND>
@@ -86,5 +76,3 @@ Used with image based formats.
 [default: 1.2]
 
 [ENV: LOSRS__OUTPUT__LINE_HEIGHT_SCALING]
-
------ stderr -----
