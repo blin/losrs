@@ -1,12 +1,5 @@
-use std::ffi::OsStr;
-use std::fs;
-use std::path::Path;
-use std::process::Command;
 use std::sync::LazyLock;
 
-use anyhow::Result;
-
-use insta_cmd::get_cargo_bin;
 use regex::Regex;
 
 // TempDir uses https://docs.rs/fastrand/latest/fastrand/struct.Rng.html#method.alphanumeric
@@ -15,60 +8,51 @@ use regex::Regex;
 static TMP_DIR_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"/.*?\.tmp[a-zA-Z0-9]{6}").unwrap());
 
-pub fn redacted_args(cmd: &Command) -> Vec<String> {
-    cmd.get_args()
-        .map(|x| TMP_DIR_RE.replace_all(&x.to_string_lossy(), "[TMP_DIR]").to_string())
-        .collect()
-}
-
 pub fn redacted_text(out: &str) -> String {
     TMP_DIR_RE.replace_all(out, "[TMP_DIR]").to_string()
 }
 
-pub fn build_args(args: &[&str], pages: &[&str]) -> Result<(tempfile::TempDir, Vec<String>)> {
-    let graph_root = construct_graph_root(pages)?;
-
-    let mut final_args: Vec<String> = Vec::new();
-
-    let config_path = graph_root.path().join("losrs.toml");
-    std::fs::File::create(&config_path)?;
-    final_args.push(format!("--config={}", config_path.display()));
-
-    let updated_args =
-        args.iter().map(|arg| arg.replace("$GRAPH_ROOT", graph_root.path().to_str().unwrap()));
-    final_args.extend(updated_args);
-
-    Ok((graph_root, final_args))
+pub fn format_diff(chunks: Vec<dissimilar::Chunk>) -> String {
+    let mut buf = String::new();
+    for chunk in chunks {
+        let formatted = match chunk {
+            dissimilar::Chunk::Equal(text) => text.into(),
+            dissimilar::Chunk::Delete(text) => format!("\x1b[41m{}\x1b[0m", text),
+            dissimilar::Chunk::Insert(text) => format!("\x1b[42m{}\x1b[0m", text),
+        };
+        buf.push_str(&formatted);
+    }
+    buf
 }
 
-fn construct_graph_root(pages: &[&str]) -> Result<tempfile::TempDir> {
-    let graph_root = tempfile::TempDir::new()?;
-    let pages_dir = graph_root.path().join("pages");
-    std::fs::create_dir(pages_dir.as_path())?;
+pub use dissimilar::diff as __diff;
 
-    pages.iter().enumerate().for_each(|(idx, page)| {
-        fs::write(pages_dir.join(format!("{}.md", idx)), page)
-            .expect("expect temp page writes to succeed")
-    });
-
-    Ok(graph_root)
+// Copied from https://github.com/rust-lang/rust-analyzer/blob/1dbdac8f518e5d3400a0bbc0478a606ab70d8a44/crates/test_utils/src/lib.rs#L38
+#[macro_export]
+macro_rules! assert_eq_text {
+    ($left:expr, $right:expr) => {
+        assert_eq_text!($left, $right,)
+    };
+    ($left:expr, $right:expr, $($tt:tt)*) => {{
+        let left = $left;
+        let right = $right;
+        if left != right {
+            if left.trim() == right.trim() {
+                std::eprintln!("Left:\n{:?}\n\nRight:\n{:?}\n\nWhitespace difference\n", left, right);
+            } else {
+                let diff = $crate::__diff(left, right);
+                std::eprintln!("Left:\n{}\n\nRight:\n{}\n\nDiff:\n{}\n", left, right, $crate::format_diff(diff));
+            }
+            std::eprintln!($($tt)*);
+            panic!("text differs");
+        }
+    }};
 }
 
-pub fn construct_command<I, S>(args: I, envs: Vec<(&str, &str)>) -> Command
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
-{
-    let mut cmd = Command::new(get_cargo_bin("losrs"));
-    cmd.args(args).envs(envs);
-    cmd
-}
-
-// Extracted from private function
-// https://github.com/mitsuhiko/insta-cmd/blob/0.6.0/src/spawn.rs#L22-L30
-pub fn insta_cmd_describe_program(cmd: &std::ffi::OsStr) -> String {
-    let filename = Path::new(cmd).file_name().unwrap();
-    let name = filename.to_string_lossy();
-    let name = &name as &str;
-    name.into()
+// Copied from https://github.com/assert-rs/assert_cmd/blob/v2.1.1/src/macros.rs#L56
+#[macro_export]
+macro_rules! cargo_bin {
+    ($bin_target_name:expr) => {
+        ::std::path::Path::new(env!(concat!("CARGO_BIN_EXE_", $bin_target_name)))
+    };
 }

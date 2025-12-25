@@ -1,0 +1,27 @@
+-- pages/Derivative.md --
+- Not card
+- What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
+  card-last-reviewed:: 2025-04-28T09:12:30.985Z
+  card-last-interval:: 244.14
+  card-ease-factor:: 3.1
+  card-last-score:: 5
+  card-repeats:: 6
+  card-next-schedule:: 2025-12-28T00:00:00.000Z
+  - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
+- Not card
+-- actions/01_action_name --
+RunLosrs
+-- actions/01_action_args --
+show $GRAPH_ROOT
+-- actions/01_action_envs --
+LOSRS__OUTPUT__FORMAT=storage
+-- actions/01_expected_stdout --
+- What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-12-28T00:00:00.000Z
+  card-last-reviewed:: 2025-04-28T09:12:30.985Z
+  card-last-score:: 5
+  card-fsrs-metadata:: {"due":"2025-12-28T00:00:00Z","stability":244.14,"difficulty":5.0,"elapsed_days":244,"scheduled_days":244,"reps":6,"lapses":0,"state":"Review","last_review":"2025-04-28T09:12:30.985Z"}
+  - $$\int{x^r dx} = \frac{x^{(r+1)}}{r+1} + C$$
