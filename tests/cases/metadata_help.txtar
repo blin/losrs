@@ -1,0 +1,15 @@
+-- actions/01_action_name --
+RunLosrs
+-- actions/01_action_args --
+metadata --help
+-- actions/01_expected_stdout --
+Print metadata for cards
+
+Usage: losrs metadata <PATH> [CARD_ID]
+
+Arguments:
+  <PATH>     The path to the page file or graph root directory
+  [CARD_ID]  Card's serial number or fingerprint of the card's prompt. Use `metadata` command to find either
+
+Options:
+  -h, --help  Print help
