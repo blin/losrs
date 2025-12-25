@@ -1,0 +1,45 @@
+-- .card-serial-num --
+5
+-- pages/Sphere.md --
+- Not card
+- What is a sphere? #card <!-- CSN:3 -->
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+-- losrs.toml --
+[output]
+format = "clean"
+-- steps/01_action_name --
+RunLosrsReview
+-- steps/01_action_args --
+review $GRAPH_ROOT --at=2025-11-22T15:04:05.123456789Z
+-- steps/01_review_actions --
+exp_string,Press any key to show the answer
+send, 
+flush,
+exp_string,How much effort did recall require?
+exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall
+send,2
+flush,
+read_line,
+-- steps/02_action_name --
+RunLosrs
+-- steps/02_action_args --
+show $GRAPH_ROOT
+-- steps/02_action_envs --
+LOSRS__OUTPUT__FORMAT=storage
+-- steps/02_expected_stdout --
+- What is a sphere? #card <!-- CSN:3 -->
+  card-last-interval:: 606
+  card-repeats:: 7
+  card-ease-factor:: 2.5
+  card-next-schedule:: 2027-07-21T15:04:05.123Z
+  card-last-reviewed:: 2025-11-22T15:04:05.123Z
+  card-last-score:: 5
+  card-fsrs-metadata:: {"due":"2027-07-21T15:04:05.123Z","stability":605.916,"difficulty":4.96,"elapsed_days":245,"scheduled_days":606,"reps":7,"lapses":0,"state":"Review","last_review":"2025-11-22T15:04:05.123Z"}
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
