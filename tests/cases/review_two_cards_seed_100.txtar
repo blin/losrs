@@ -1,0 +1,69 @@
+-- pages/Alphabet.md --
+- Not card
+- Alphabet forward cards
+  - What is Gregg Simplified for "N" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward short stroke
+  - What is Gregg Simplified for "M" (description)? #card
+    card-last-interval:: 15.0
+    card-repeats:: 4
+    card-ease-factor:: 1.0
+    card-next-schedule:: 2025-08-12T09:03:05.489Z
+    card-last-reviewed:: 2025-07-04T09:03:05.489Z
+    card-last-score:: 1
+    - forward long stroke
+- Not card
+-- losrs.toml --
+[output]
+format = "clean"
+-- steps/01_action_name --
+RunLosrsReview
+-- steps/01_action_args --
+review $GRAPH_ROOT --at=2025-09-01T15:04:05.123456789Z --seed=100
+-- steps/01_review_actions --
+exp_string,Press any key to show the answer
+send, 
+flush,
+exp_string,How much effort did recall require?
+exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall
+send,2
+flush,
+read_line,
+exp_string,Press any key to show the answer
+send, 
+flush,
+exp_string,How much effort did recall require?
+exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall
+send,2
+flush,
+read_line,
+-- steps/02_action_name --
+RunLosrs
+-- steps/02_action_args --
+show $GRAPH_ROOT
+-- steps/02_action_envs --
+LOSRS__OUTPUT__FORMAT=storage
+-- steps/02_expected_stdout --
+  - What is Gregg Simplified for "N" (description)? #card <!-- CSN:0 -->
+    card-last-interval:: 120
+    card-repeats:: 5
+    card-ease-factor:: 2.5
+    card-next-schedule:: 2025-12-30T15:04:05.123Z
+    card-last-reviewed:: 2025-09-01T15:04:05.123Z
+    card-last-score:: 5
+    card-fsrs-metadata:: {"due":"2025-12-30T15:04:05.123Z","stability":120.037,"difficulty":4.96,"elapsed_days":59,"scheduled_days":120,"reps":5,"lapses":0,"state":"Review","last_review":"2025-09-01T15:04:05.123Z"}
+    - forward short stroke
+  - What is Gregg Simplified for "M" (description)? #card <!-- CSN:1 -->
+    card-last-interval:: 120
+    card-repeats:: 5
+    card-ease-factor:: 2.5
+    card-next-schedule:: 2025-12-30T15:04:05.123Z
+    card-last-reviewed:: 2025-09-01T15:04:05.123Z
+    card-last-score:: 5
+    card-fsrs-metadata:: {"due":"2025-12-30T15:04:05.123Z","stability":120.037,"difficulty":4.96,"elapsed_days":59,"scheduled_days":120,"reps":5,"lapses":0,"state":"Review","last_review":"2025-09-01T15:04:05.123Z"}
+    - forward long stroke
