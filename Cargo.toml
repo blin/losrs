@@ -27,10 +27,6 @@ viuer = { version = "0.9.2", default-features = false }
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 
 [dev-dependencies]
-insta = { version = "1.43.1", features = ["filters"] }
-insta-cmd = "0.6.0"
 rexpect = "0.6.2"
 test_utils = { path = "crates/test_utils" }
-
-[profile.dev.package]
-insta.opt-level = 3
+txtar = "1.0.0"
