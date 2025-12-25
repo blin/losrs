@@ -1,0 +1,37 @@
+-- pages/Sphere.md --
+- Not card
+- What is a sphere? #card
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+-- losrs.toml --
+[output]
+format = "clean"
+-- steps/01_action_name --
+RunLosrsReview
+-- steps/01_action_args --
+review $GRAPH_ROOT --at=2025-11-22T15:04:05.123456789Z
+-- steps/01_review_actions --
+exp_string,Press any key to show the answer
+send, 
+flush,
+exp_string,How much effort did recall require?
+exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall
+send,2
+flush,
+read_line,
+-- steps/02_action_name --
+RunLosrs
+-- steps/02_action_args --
+show $GRAPH_ROOT
+-- steps/02_action_envs --
+LOSRS__OUTPUT__FORMAT=storage
+-- steps/02_expected_stdout --
+- What is a sphere? #card <!-- CSN:0 -->
+  card-last-interval:: 3
+  card-repeats:: 1
+  card-ease-factor:: 2.5
+  card-next-schedule:: 2025-11-25T15:04:05.123Z
+  card-last-reviewed:: 2025-11-22T15:04:05.123Z
+  card-last-score:: 5
+  card-fsrs-metadata:: {"due":"2025-11-25T15:04:05.123Z","stability":3.126,"difficulty":5.315,"elapsed_days":0,"scheduled_days":3,"reps":1,"lapses":0,"state":"Review","last_review":"2025-11-22T15:04:05.123Z"}
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
