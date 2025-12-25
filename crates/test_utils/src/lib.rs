@@ -72,3 +72,40 @@ pub fn insta_cmd_describe_program(cmd: &std::ffi::OsStr) -> String {
     let name = &name as &str;
     name.into()
 }
+
+pub use dissimilar::diff as __diff;
+
+pub fn format_diff(chunks: Vec<dissimilar::Chunk>) -> String {
+    let mut buf = String::new();
+    for chunk in chunks {
+        let formatted = match chunk {
+            dissimilar::Chunk::Equal(text) => text.into(),
+            dissimilar::Chunk::Delete(text) => format!("\x1b[41m{}\x1b[0m", text),
+            dissimilar::Chunk::Insert(text) => format!("\x1b[42m{}\x1b[0m", text),
+        };
+        buf.push_str(&formatted);
+    }
+    buf
+}
+
+// Copied from https://github.com/rust-lang/rust-analyzer/blob/1dbdac8f518e5d3400a0bbc0478a606ab70d8a44/crates/test_utils/src/lib.rs#L38
+#[macro_export]
+macro_rules! assert_eq_text {
+    ($left:expr, $right:expr) => {
+        assert_eq_text!($left, $right,)
+    };
+    ($left:expr, $right:expr, $($tt:tt)*) => {{
+        let left = $left;
+        let right = $right;
+        if left != right {
+            if left.trim() == right.trim() {
+                std::eprintln!("Left:\n{:?}\n\nRight:\n{:?}\n\nWhitespace difference\n", left, right);
+            } else {
+                let diff = $crate::__diff(left, right);
+                std::eprintln!("Left:\n{}\n\nRight:\n{}\n\nDiff:\n{}\n", left, right, $crate::format_diff(diff));
+            }
+            std::eprintln!($($tt)*);
+            panic!("text differs");
+        }
+    }};
+}

@@ -1,18 +1,8 @@
----
-source: tests/output.rs
-info:
-  program: losrs
-  args:
-    - "--config=[TMP_DIR]/losrs.toml"
-    - metadata
-    - "--help"
-  envs: {}
-  page_lines:
-    - - ""
----
-success: true
-exit_code: 0
------ stdout -----
+-- steps/01_action_name --
+RunLosrs
+-- steps/01_action_args --
+metadata --help
+-- steps/01_expected_stdout --
 Print metadata for cards
 
 Usage: losrs metadata <PATH> [CARD_ID]
@@ -23,5 +13,3 @@ Arguments:
 
 Options:
   -h, --help  Print help
-
------ stderr -----
