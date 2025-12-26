@@ -26,7 +26,6 @@ CardMetadata {
   serial_num         : N/A
   source_path        : [TMP_DIR]/pages/0.md
   prompt_fingerprint : 0xb9de554a02212aca
-  prompt_prefix      : What is a sphere? #card
   srs_meta           : SRSMeta {
     repeats       : 6
     next_schedule : 2025-11-21T00:00:00+00:00
@@ -38,7 +37,6 @@ CardMetadata {
   serial_num         : 5
   source_path        : [TMP_DIR]/pages/0.md
   prompt_fingerprint : 0x7e7f6c73cea43876
-  prompt_prefix      : What is the volume of a sphere (symbolic)? #card <!-- CSN:5 -->
   srs_meta           : SRSMeta {
     repeats       : 6
     next_schedule : 2025-11-27T00:00:00+00:00

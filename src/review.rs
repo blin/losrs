@@ -79,10 +79,9 @@ pub fn review_card(
 
     let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
         format!(
-            "When extracting card with fingerprint {} from {}, card with prompt prefix: {}",
+            "When extracting card with fingerprint {} from {}",
             cm.card_ref.prompt_fingerprint,
             cm.card_ref.source_path.display(),
-            cm.prompt_prefix
         )
     })?;
 
