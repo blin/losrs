@@ -269,8 +269,6 @@ fn extract_card(
     let prompt_line_first = prompt_lines.first().unwrap_or(&"").to_owned().trim_end();
     let prompt_indent_size = prompt_line_first.chars().take_while(|c| *c == ' ').count();
     let prompt_indent = " ".repeat(prompt_indent_size);
-    // prompt_indent+2 to strip `- `
-    let prompt_prefix = prompt_line_first.chars().skip(prompt_indent_size + 2).take(64).collect();
 
     let prompt = strip_indent(strip_prompt_metadata(prompt_lines.iter().copied()), &prompt_indent)
         .collect::<Vec<_>>()
@@ -286,7 +284,6 @@ fn extract_card(
                 prompt_fingerprint: prompt.as_str().into(),
                 serial_num: extract_serial_num(&prompt),
             },
-            prompt_prefix,
             srs_meta: SRSMeta::from_prompt_lines(prompt_lines)
                 .with_context(|| "when extracting SRS meta")?,
         },

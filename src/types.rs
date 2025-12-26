@@ -135,7 +135,6 @@ pub struct SRSMeta {
 
 pub struct CardMetadata {
     pub card_ref: CardRef,
-    pub prompt_prefix: String,
     pub srs_meta: SRSMeta,
 }
 
@@ -147,7 +146,6 @@ impl Debug for CardMetadata {
         writeln!(f, "  serial_num         : {}", self.card_ref.serial_num.map(|serial_num| serial_num.to_string()).unwrap_or("N/A".to_string()))?;
         writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
         writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
-        writeln!(f, "  prompt_prefix      : {}", self.prompt_prefix)?;
         writeln!(f, "  srs_meta           : SRSMeta {{")?;
         writeln!(f, "    repeats       : {}", self.srs_meta.logseq_srs_meta.repeats)?;
         writeln!(f, "    next_schedule : {:?}", self.srs_meta.logseq_srs_meta.next_schedule)?;
