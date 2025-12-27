@@ -24,7 +24,7 @@ use markdown::to_mdast;
 use regex::Regex;
 
 use crate::output::CardBodyParts;
-use crate::output::format_card_storage;
+use crate::output::format_card_logseq;
 use crate::types::Card;
 use crate::types::CardBody;
 use crate::types::CardMetadata;
@@ -374,7 +374,7 @@ pub fn rewrite_card_meta(
                 f.write_all("\n".as_bytes())?;
             }
 
-            format_card_storage(&card, &mut f, &CardBodyParts::All)?;
+            format_card_logseq(&card, &mut f, &CardBodyParts::All)?;
 
             let post_lines = &file_raw_lines[l_lines.into_inner().1 + 1..];
             if !post_lines.is_empty() {
