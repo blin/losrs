@@ -54,7 +54,7 @@ pub fn show_card_prompt(card: &Card, output_settings: &OutputSettings) -> Result
 }
 
 pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
-    println!("{:?}", cm);
+    println!("{}", serde_json::to_string_pretty(&cm)?);
     Ok(())
 }
 
