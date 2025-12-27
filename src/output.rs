@@ -34,7 +34,7 @@ fn show_card_inner(
     match output_settings.format {
         OutputFormat::Clean => format_card_clean(card, &mut result, card_body_parts)?,
         OutputFormat::Typst => format_card_typst(card, &mut result, card_body_parts)?,
-        OutputFormat::Storage => format_card_storage(card, &mut result, card_body_parts)?,
+        OutputFormat::Logseq => format_card_logseq(card, &mut result, card_body_parts)?,
         OutputFormat::Sixel => {
             format_card_sixel(card, &mut result, card_body_parts, output_settings)?
         }
@@ -330,7 +330,7 @@ fn png_to_sixel(png_buf: Vec<u8>) -> Result<Vec<u8>> {
     Ok(output.stdout)
 }
 
-fn format_card_storage_text(
+fn format_card_logseq_text(
     mut writer: impl std::io::Write,
     text: &str,
     indent: &str,
@@ -342,7 +342,7 @@ fn format_card_storage_text(
 }
 
 #[derive(Serialize)]
-struct FSRSMetaForStorage {
+struct FSRSMetaForLogseq {
     pub due: DateTime<Utc>,
     pub stability: f64,
     pub difficulty: f64,
@@ -358,9 +358,9 @@ fn truncate_to_millis(dt: &DateTime<Utc>) -> DateTime<Utc> {
     DateTime::<Utc>::from_timestamp_millis(dt.timestamp_millis()).unwrap()
 }
 
-impl From<&FSRSMeta> for FSRSMetaForStorage {
+impl From<&FSRSMeta> for FSRSMetaForLogseq {
     fn from(value: &FSRSMeta) -> Self {
-        FSRSMetaForStorage {
+        FSRSMetaForLogseq {
             due: truncate_to_millis(&value.due),
             stability: (value.stability * 1000.0).round() / 1000.0,
             difficulty: (value.difficulty * 1000.0).round() / 1000.0,
@@ -374,7 +374,7 @@ impl From<&FSRSMeta> for FSRSMetaForStorage {
     }
 }
 
-fn format_card_storage_srs_meta(
+fn format_card_logseq_srs_meta(
     mut writer: impl std::io::Write,
     srs_meta: &SRSMeta,
     indent: &str,
@@ -395,26 +395,26 @@ fn format_card_storage_srs_meta(
     )?;
     writeln!(writer, "{indent}card-last-score:: {}", logseq_srs_meta.last_score)?;
 
-    let fsrs_meta: FSRSMetaForStorage = (&srs_meta.fsrs_meta).into();
+    let fsrs_meta: FSRSMetaForLogseq = (&srs_meta.fsrs_meta).into();
     writeln!(writer, "{indent}card-fsrs-metadata:: {}", serde_json::to_string(&fsrs_meta)?)?;
 
     Ok(())
 }
 
-pub fn format_card_storage(
+pub fn format_card_logseq(
     card: &Card,
     mut writer: impl std::io::Write,
     card_body_parts: &CardBodyParts,
 ) -> Result<()> {
-    // format_card_storage does not accept a CardBodyPart, as the card is always stored with all parts
+    // format_card_logseq does not accept a CardBodyPart, as the card is always stored with all parts
     if let CardBodyParts::Prompt = card_body_parts {
-        return Err(anyhow!("can not output just the prompt in storage format"));
+        return Err(anyhow!("can not output just the prompt in logseq format"));
     }
     let prompt_indent = " ".repeat(card.body.prompt_indent);
     let meta_indent = " ".repeat(card.body.prompt_indent + 2);
-    format_card_storage_text(&mut writer, &card.body.prompt, &prompt_indent)?;
-    format_card_storage_srs_meta(&mut writer, &card.metadata.srs_meta, &meta_indent)?;
-    format_card_storage_text(&mut writer, &card.body.response, &prompt_indent)?;
+    format_card_logseq_text(&mut writer, &card.body.prompt, &prompt_indent)?;
+    format_card_logseq_srs_meta(&mut writer, &card.metadata.srs_meta, &meta_indent)?;
+    format_card_logseq_text(&mut writer, &card.body.response, &prompt_indent)?;
 
     Ok(())
 }

@@ -285,22 +285,22 @@ test_file!(show_card_is_deeply_nested, "show_card_is_deeply_nested.txtar");
 test_file!(show_card_with_data_after_metadata, "show_card_with_data_after_metadata.txtar");
 test_file!(show_card_with_unicode_prompt, "show_card_with_unicode_prompt.txtar");
 test_file!(show_format_clean, "show_format_clean.txtar");
-test_file!(show_format_storage, "show_format_storage.txtar");
+test_file!(show_format_logseq, "show_format_logseq.txtar");
 test_file!(
-    show_format_storage_card_is_deeply_nested,
-    "show_format_storage_card_is_deeply_nested.txtar"
+    show_format_logseq_card_is_deeply_nested,
+    "show_format_logseq_card_is_deeply_nested.txtar"
 );
 test_file!(
-    show_format_storage_card_with_fsrs_metadata,
-    "show_format_storage_card_with_fsrs_metadata.txtar"
+    show_format_logseq_card_with_fsrs_metadata,
+    "show_format_logseq_card_with_fsrs_metadata.txtar"
 );
 test_file!(
-    show_format_storage_card_with_reordered_metadata,
-    "show_format_storage_card_with_reordered_metadata.txtar"
+    show_format_logseq_card_with_reordered_metadata,
+    "show_format_logseq_card_with_reordered_metadata.txtar"
 );
 test_file!(
-    show_format_storage_card_without_metadata,
-    "show_format_storage_card_without_metadata.txtar"
+    show_format_logseq_card_without_metadata,
+    "show_format_logseq_card_without_metadata.txtar"
 );
 test_file!(show_format_typst, "show_format_typst.txtar");
 test_file!(show_multiple_page_files, "show_multiple_page_files.txtar");

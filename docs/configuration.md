@@ -14,7 +14,7 @@ Format used when displaying cards via show and review commands.
 
 [default: clean]
 
-[possible values: clean, typst, storage, sixel, kitty, i-term]
+[possible values: clean, typst, logseq, sixel, kitty, i-term]
 
 [ENV: LOSRS__OUTPUT__FORMAT]
 

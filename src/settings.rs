@@ -50,7 +50,7 @@ impl Settings {
 pub enum OutputFormat {
     Clean,
     Typst,
-    Storage,
+    Logseq,
     Sixel,
     Kitty,
     ITerm,
