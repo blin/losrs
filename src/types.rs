@@ -1,3 +1,4 @@
+use serde::Serialize;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -18,6 +19,15 @@ impl std::fmt::Display for Fingerprint {
     }
 }
 
+impl Serialize for Fingerprint {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!("{}", self))
+    }
+}
+
 impl From<u64> for Fingerprint {
     fn from(value: u64) -> Self {
         Fingerprint(value)
@@ -35,6 +45,7 @@ impl From<&str> for Fingerprint {
 // * I want to be able to load one card at a time and immediately store it back modified
 // * If a card has just been added it will not have a serial number assigned, so we need to use something else when writing back
 // * source_path is potentially used in lots of cards, avoid copying it
+#[derive(Serialize)]
 pub struct CardRef {
     pub source_path: Rc<PathBuf>,
     // prompt_fingerprint is XXH3 64 and will remain valid within the version of the crate,
@@ -57,7 +68,7 @@ pub struct CardRef {
 // We don't use most of these,
 // but we preserve them anyway to enable simultaneous use with Logseq.
 // The order of properties is from `operation-score!` function in Logseq.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct LogseqSRSMeta {
     pub last_interval: f64,
     // TODO: change repeats type to i32 to match fsrs meta
@@ -126,34 +137,17 @@ impl From<&FSRSMeta> for LogseqSRSMeta {
 }
 
 // Spaced Repetition System (SRS) Metadata
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SRSMeta {
     pub logseq_srs_meta: LogseqSRSMeta,
     // fsrs_meta is optional on read, but we will always write it out
     pub fsrs_meta: FSRSMeta,
 }
 
+#[derive(Serialize)]
 pub struct CardMetadata {
     pub card_ref: CardRef,
     pub srs_meta: SRSMeta,
-}
-
-impl Debug for CardMetadata {
-    // Skip formatting to preserve visual alignment
-    #[rustfmt::skip]
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "CardMetadata {{")?;
-        writeln!(f, "  serial_num         : {}", self.card_ref.serial_num.map(|serial_num| serial_num.to_string()).unwrap_or("N/A".to_string()))?;
-        writeln!(f, "  source_path        : {}", self.card_ref.source_path.display())?;
-        writeln!(f, "  prompt_fingerprint : {}", self.card_ref.prompt_fingerprint)?;
-        writeln!(f, "  srs_meta           : SRSMeta {{")?;
-        writeln!(f, "    repeats       : {}", self.srs_meta.logseq_srs_meta.repeats)?;
-        writeln!(f, "    next_schedule : {:?}", self.srs_meta.logseq_srs_meta.next_schedule)?;
-        writeln!(f, "    last_reviewed : {:?}", self.srs_meta.logseq_srs_meta.last_reviewed)?;
-        writeln!(f, "    fsrs_meta     : {:?}", self.srs_meta.fsrs_meta)?;
-        writeln!(f, "  }}")?;
-        write!(f, "}}")
-    }
 }
 
 pub struct CardBody {
