@@ -13,10 +13,43 @@
 [output]
 format = "clean"
 -- actions/01_action_name --
-RunLosrsReview
+RunLosrs
 -- actions/01_action_args --
+metadata $GRAPH_ROOT
+-- actions/01_expected_stdout --
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/Sphere.md",
+    "prompt_fingerprint": "0xb9de554a02212aca",
+    "serial_num": null
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 244.14,
+      "repeats": 6,
+      "ease_factor": 3.1,
+      "next_schedule": "2025-11-21T00:00:00Z",
+      "last_reviewed": "2025-03-22T09:54:57.202Z",
+      "last_score": 5
+    },
+    "fsrs_meta": {
+      "due": "2025-11-21T00:00:00Z",
+      "stability": 244.14,
+      "difficulty": 5.0,
+      "elapsed_days": 244,
+      "scheduled_days": 244,
+      "reps": 6,
+      "lapses": 0,
+      "state": "Review",
+      "last_review": "2025-03-22T09:54:57.202Z"
+    }
+  }
+}
+-- actions/02_action_name --
+RunLosrsReview
+-- actions/02_action_args --
 review $GRAPH_ROOT --at=2025-11-22T15:04:05.123456789Z
--- actions/01_review_actions --
+-- actions/02_review_actions --
 exp_string,Press any key to show the answer
 send, 
 flush,
@@ -25,19 +58,36 @@ exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not reca
 send,2
 flush,
 read_line,
--- actions/02_action_name --
+-- actions/03_action_name --
 RunLosrs
--- actions/02_action_args --
-show $GRAPH_ROOT
--- actions/02_action_envs --
-LOSRS__OUTPUT__FORMAT=storage
--- actions/02_expected_stdout --
-- What is a sphere? #card <!-- CSN:0 -->
-  card-last-interval:: 606
-  card-repeats:: 7
-  card-ease-factor:: 2.5
-  card-next-schedule:: 2027-07-21T15:04:05.123Z
-  card-last-reviewed:: 2025-11-22T15:04:05.123Z
-  card-last-score:: 5
-  card-fsrs-metadata:: {"due":"2027-07-21T15:04:05.123Z","stability":605.916,"difficulty":4.96,"elapsed_days":245,"scheduled_days":606,"reps":7,"lapses":0,"state":"Review","last_review":"2025-11-22T15:04:05.123Z"}
-  - Set of points in a 3 dimensional space that are equidistant from a center point.
+-- actions/03_action_args --
+metadata $GRAPH_ROOT
+-- actions/03_expected_stdout --
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/Sphere.md",
+    "prompt_fingerprint": "0x481b8539d850822f",
+    "serial_num": 0
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 606.0,
+      "repeats": 7,
+      "ease_factor": 2.5,
+      "next_schedule": "2027-07-21T15:04:05.123Z",
+      "last_reviewed": "2025-11-22T15:04:05.123Z",
+      "last_score": 5
+    },
+    "fsrs_meta": {
+      "due": "2027-07-21T15:04:05.123Z",
+      "stability": 605.916,
+      "difficulty": 4.96,
+      "elapsed_days": 245,
+      "scheduled_days": 606,
+      "reps": 7,
+      "lapses": 0,
+      "state": "Review",
+      "last_review": "2025-11-22T15:04:05.123Z"
+    }
+  }
+}
