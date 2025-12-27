@@ -20,7 +20,7 @@ markdown = "1.0.0"
 rand = { version = "0.9.1", default-features = false, features = ["small_rng"] }
 regex = { version = "1.12.2", default-features = false }
 rs-fsrs = { version = "1.2.1", features = ["serde"] }
-serde = "1.0.219"
+serde = { version = "1.0.219", features = ["rc"] }
 serde_json = "1.0.140"
 tempfile = "3.20.0"
 viuer = { version = "0.9.2", default-features = false }
