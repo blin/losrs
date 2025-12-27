@@ -22,48 +22,145 @@
 [output]
 format = "clean"
 -- actions/01_action_name --
-RunLosrsReview
--- actions/01_action_args --
-review $GRAPH_ROOT --at=2025-09-01T15:04:05.123456789Z --seed=0
--- actions/01_review_actions --
-exp_string,Press any key to show the answer
-send, 
-flush,
-exp_string,How much effort did recall require?
-exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall
-send,2
-flush,
-read_line,
-exp_string,Press any key to show the answer
-send, 
-flush,
-exp_string,How much effort did recall require?
-exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall
-send,2
-flush,
-read_line,
--- actions/02_action_name --
 RunLosrs
+-- actions/01_action_args --
+metadata $GRAPH_ROOT
+-- actions/01_expected_stdout --
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/Alphabet.md",
+    "prompt_fingerprint": "0xf9b9bc8eb405ac71",
+    "serial_num": null
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 15.0,
+      "repeats": 4,
+      "ease_factor": 1.0,
+      "next_schedule": "2025-08-12T09:03:05.489Z",
+      "last_reviewed": "2025-07-04T09:03:05.489Z",
+      "last_score": 1
+    },
+    "fsrs_meta": {
+      "due": "2025-08-12T09:03:05.489Z",
+      "stability": 15.0,
+      "difficulty": 5.0,
+      "elapsed_days": 15,
+      "scheduled_days": 15,
+      "reps": 4,
+      "lapses": 0,
+      "state": "Review",
+      "last_review": "2025-07-04T09:03:05.489Z"
+    }
+  }
+}
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/Alphabet.md",
+    "prompt_fingerprint": "0x3b65f8095b38d5bf",
+    "serial_num": null
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 15.0,
+      "repeats": 4,
+      "ease_factor": 1.0,
+      "next_schedule": "2025-08-12T09:03:05.489Z",
+      "last_reviewed": "2025-07-04T09:03:05.489Z",
+      "last_score": 1
+    },
+    "fsrs_meta": {
+      "due": "2025-08-12T09:03:05.489Z",
+      "stability": 15.0,
+      "difficulty": 5.0,
+      "elapsed_days": 15,
+      "scheduled_days": 15,
+      "reps": 4,
+      "lapses": 0,
+      "state": "Review",
+      "last_review": "2025-07-04T09:03:05.489Z"
+    }
+  }
+}
+-- actions/02_action_name --
+RunLosrsReview
 -- actions/02_action_args --
-show $GRAPH_ROOT
--- actions/02_action_envs --
-LOSRS__OUTPUT__FORMAT=storage
--- actions/02_expected_stdout --
-  - What is Gregg Simplified for "N" (description)? #card <!-- CSN:1 -->
-    card-last-interval:: 120
-    card-repeats:: 5
-    card-ease-factor:: 2.5
-    card-next-schedule:: 2025-12-30T15:04:05.123Z
-    card-last-reviewed:: 2025-09-01T15:04:05.123Z
-    card-last-score:: 5
-    card-fsrs-metadata:: {"due":"2025-12-30T15:04:05.123Z","stability":120.037,"difficulty":4.96,"elapsed_days":59,"scheduled_days":120,"reps":5,"lapses":0,"state":"Review","last_review":"2025-09-01T15:04:05.123Z"}
-    - forward short stroke
-  - What is Gregg Simplified for "M" (description)? #card <!-- CSN:0 -->
-    card-last-interval:: 120
-    card-repeats:: 5
-    card-ease-factor:: 2.5
-    card-next-schedule:: 2025-12-30T15:04:05.123Z
-    card-last-reviewed:: 2025-09-01T15:04:05.123Z
-    card-last-score:: 5
-    card-fsrs-metadata:: {"due":"2025-12-30T15:04:05.123Z","stability":120.037,"difficulty":4.96,"elapsed_days":59,"scheduled_days":120,"reps":5,"lapses":0,"state":"Review","last_review":"2025-09-01T15:04:05.123Z"}
-    - forward long stroke
+review $GRAPH_ROOT --at=2025-09-01T15:04:05.123456789Z --seed=0
+-- actions/02_review_actions --
+exp_string,Press any key to show the answer
+send, 
+flush,
+exp_string,How much effort did recall require?
+exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall
+send,2
+flush,
+read_line,
+exp_string,Press any key to show the answer
+send, 
+flush,
+exp_string,How much effort did recall require?
+exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall
+send,2
+flush,
+read_line,
+-- actions/03_action_name --
+RunLosrs
+-- actions/03_action_args --
+metadata $GRAPH_ROOT
+-- actions/03_expected_stdout --
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/Alphabet.md",
+    "prompt_fingerprint": "0x1ce3113c34e9b1c3",
+    "serial_num": 1
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 120.0,
+      "repeats": 5,
+      "ease_factor": 2.5,
+      "next_schedule": "2025-12-30T15:04:05.123Z",
+      "last_reviewed": "2025-09-01T15:04:05.123Z",
+      "last_score": 5
+    },
+    "fsrs_meta": {
+      "due": "2025-12-30T15:04:05.123Z",
+      "stability": 120.037,
+      "difficulty": 4.96,
+      "elapsed_days": 59,
+      "scheduled_days": 120,
+      "reps": 5,
+      "lapses": 0,
+      "state": "Review",
+      "last_review": "2025-09-01T15:04:05.123Z"
+    }
+  }
+}
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/Alphabet.md",
+    "prompt_fingerprint": "0x10e66f386360ef63",
+    "serial_num": 0
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 120.0,
+      "repeats": 5,
+      "ease_factor": 2.5,
+      "next_schedule": "2025-12-30T15:04:05.123Z",
+      "last_reviewed": "2025-09-01T15:04:05.123Z",
+      "last_score": 5
+    },
+    "fsrs_meta": {
+      "due": "2025-12-30T15:04:05.123Z",
+      "stability": 120.037,
+      "difficulty": 4.96,
+      "elapsed_days": 59,
+      "scheduled_days": 120,
+      "reps": 5,
+      "lapses": 0,
+      "state": "Review",
+      "last_review": "2025-09-01T15:04:05.123Z"
+    }
+  }
+}
