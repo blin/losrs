@@ -8,7 +8,7 @@ RunLosrs
 -- actions/01_action_args --
 show $GRAPH_ROOT
 -- actions/01_action_envs --
-LOSRS__OUTPUT__FORMAT=storage
+LOSRS__OUTPUT__FORMAT=logseq
 -- actions/01_expected_stdout --
 - What is the antiderivative of $f(x) = x^r$ (symbolic)? #card
   card-last-interval:: 0
