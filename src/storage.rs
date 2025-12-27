@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -22,14 +23,17 @@ use markdown::mdast::Node;
 use markdown::mdast::{self};
 use markdown::to_mdast;
 use regex::Regex;
+use serde::Deserialize;
 
 use crate::output::CardBodyParts;
 use crate::output::format_card_logseq;
+use crate::types;
 use crate::types::Card;
 use crate::types::CardBody;
 use crate::types::CardMetadata;
 use crate::types::CardRef;
 use crate::types::FSRSMeta;
+use crate::types::Fingerprint;
 use crate::types::LogseqSRSMeta;
 use crate::types::SRSMeta;
 
@@ -448,19 +452,128 @@ fn choose_serial_num_allocator(path: &Path) -> Result<Box<dyn CardSerialNumAlloc
     Ok(Box::new(GraphRootSerialNumAllocator { graph_root }))
 }
 
+trait MetadataManager {
+    fn load_card_srs_meta(&self, card_ref: &CardRef) -> Result<Option<SRSMeta>>;
+
+    fn store_card_srs_meta(&mut self, card_ref: &CardRef, card_meta: &SRSMeta) -> Result<()>;
+}
+
+struct NoOpMetadataManager {}
+impl MetadataManager for NoOpMetadataManager {
+    fn load_card_srs_meta(&self, _card_ref: &CardRef) -> Result<Option<SRSMeta>> {
+        Ok(None)
+    }
+
+    fn store_card_srs_meta(&mut self, _card_ref: &CardRef, _card_meta: &SRSMeta) -> Result<()> {
+        Ok(())
+    }
+}
+
+fn choose_metadata_manager(path: &Path) -> Result<Box<dyn MetadataManager>> {
+    let Some(graph_root) = find_graph_root(path)? else {
+        return Ok(Box::new(NoOpMetadataManager {}));
+    };
+    Ok(Box::new(SingleFileMetadataManager { graph_root }))
+}
+
+struct SingleFileMetadataManager {
+    graph_root: PathBuf,
+}
+
+#[derive(Deserialize, Debug)]
+struct CardMetadataStorage {
+    pub source_path: PathBuf,
+    pub prompt_fingerprint: u64,
+    serial_num: u64,
+    fsrs_meta: FSRSMeta,
+}
+
+impl SingleFileMetadataManager {
+    fn load_card_metadatas(&self) -> Result<Vec<CardMetadata>> {
+        let card_metadatas_path = self.graph_root.join(".card-metadatas.jsonl");
+
+        if !card_metadatas_path.exists() {
+            File::create(card_metadatas_path)?;
+            return Ok(Vec::new());
+        }
+
+        let card_metadatas_file = OpenOptions::new().read(true).open(&card_metadatas_path)?;
+        let stream = serde_json::Deserializer::from_reader(card_metadatas_file)
+            .into_iter::<CardMetadataStorage>();
+        let card_metadatas_from_storage =
+            stream.into_iter().collect::<core::result::Result<Vec<_>, serde_json::Error>>()?;
+
+        let card_metadatas = card_metadatas_from_storage
+            .into_iter()
+            .map(|q| CardMetadata {
+                card_ref: CardRef {
+                    source_path: q.source_path.into(),
+                    prompt_fingerprint: types::Fingerprint(q.prompt_fingerprint),
+                    serial_num: Some(q.serial_num),
+                },
+                srs_meta: SRSMeta {
+                    logseq_srs_meta: (&q.fsrs_meta).into(),
+                    fsrs_meta: q.fsrs_meta,
+                },
+            })
+            .collect::<Vec<_>>();
+
+        Ok(card_metadatas)
+    }
+}
+
+impl MetadataManager for SingleFileMetadataManager {
+    fn load_card_srs_meta(&self, card_ref: &CardRef) -> Result<Option<SRSMeta>> {
+        let Some(card_serial_number) = card_ref.serial_num else {
+            return Ok(None);
+        };
+        let card_metadatas = self.load_card_metadatas()?;
+        for card_metadata in card_metadatas {
+            if card_metadata.card_ref.serial_num == Some(card_serial_number) {
+                println!(
+                    "aaa {:?} {:?} {:?}",
+                    card_metadata.card_ref.serial_num,
+                    Some(card_serial_number),
+                    card_metadata.card_ref.serial_num == Some(card_serial_number)
+                );
+                return Ok(Some(card_metadata.srs_meta));
+            }
+        }
+        Ok(None)
+    }
+
+    fn store_card_srs_meta(&mut self, card_ref: &CardRef, card_meta: &SRSMeta) -> Result<()> {
+        let Some(card_serial_number) = card_ref.serial_num else {
+            panic!("tried to store card metadata without serial number. ref={:?}", card_ref);
+        };
+        Ok(())
+    }
+}
+
 pub struct StorageManager {
+    mm: Box<dyn MetadataManager>,
     serial_num_allocator: Box<dyn CardSerialNumAllocator>,
 }
 
 impl StorageManager {
     pub fn new(path: &Path) -> Result<Self> {
-        Ok(Self { serial_num_allocator: choose_serial_num_allocator(path)? })
+        Ok(Self {
+            mm: choose_metadata_manager(path)?,
+            serial_num_allocator: choose_serial_num_allocator(path)?,
+        })
     }
 
     pub fn load_card_metas(&self, page_file: &Path) -> Result<Vec<CardMetadata>> {
+        // Files are always primary for card presence, but are potentially secondary for metadata
         let card_metas = extract_card_metadatas(Rc::new(page_file.to_path_buf()))?;
+        let mut final_card_metas: Vec<CardMetadata> = Vec::with_capacity(card_metas.capacity());
+        for CardMetadata { card_ref, srs_meta } in card_metas {
+            let final_srs_meta: SRSMeta =
+                self.mm.load_card_srs_meta(&card_ref)?.unwrap_or(srs_meta);
+            final_card_metas.push(CardMetadata { card_ref, srs_meta: final_srs_meta });
+        }
 
-        Ok(card_metas)
+        Ok(final_card_metas)
     }
 
     pub fn rewrite_card_meta(&mut self, card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<()> {
@@ -498,6 +611,7 @@ impl StorageManager {
                     f.write_all(post_lines.join("\n").as_bytes())?;
                     f.write_all("\n".as_bytes())?;
                 }
+                self.mm.store_card_srs_meta(&card.metadata.card_ref, srs_meta)?;
 
                 return Ok(());
             }

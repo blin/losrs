@@ -10,7 +10,7 @@ use rs_fsrs;
 
 pub type FSRSMeta = rs_fsrs::Card;
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Fingerprint(pub u64);
 
 impl std::fmt::Display for Fingerprint {
@@ -45,7 +45,7 @@ impl From<&str> for Fingerprint {
 // * I want to be able to load one card at a time and immediately store it back modified
 // * If a card has just been added it will not have a serial number assigned, so we need to use something else when writing back
 // * source_path is potentially used in lots of cards, avoid copying it
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct CardRef {
     pub source_path: Rc<PathBuf>,
     // prompt_fingerprint is XXH3 64 and will remain valid within the version of the crate,
