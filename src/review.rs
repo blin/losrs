@@ -66,6 +66,19 @@ fn compute_next_srs_meta(fsrs_meta: &ReviewableFSRSMeta, resp: &ReviewResponse) 
     SRSMeta { logseq_srs_meta: next_logseq_srs_meta, fsrs_meta: next_fsrs_meta }
 }
 
+fn format_reviewing_phrase(cm: &CardMetadata) -> String {
+    match cm.card_ref.serial_num {
+        Some(serial_num) => format!(
+            "Reviewing card with serial number {} from {}",
+            serial_num, cm.card_ref.source_path.display()
+        ),
+        None => format!(
+            "Reviewing card with prompt fingerprint {} from {}",
+            cm.card_ref.prompt_fingerprint, cm.card_ref.source_path.display()
+        ),
+    }
+}
+
 // TODO: supply only card_ref and fsrs_meta
 pub fn review_card(
     cm: &CardMetadata,
@@ -86,11 +99,8 @@ pub fn review_card(
     })?;
 
     clear_screen()?;
-    println!(
-        "Reviewing {} from {}",
-        cm.card_ref.prompt_fingerprint,
-        cm.card_ref.source_path.display()
-    );
+    let review_phrase = format_reviewing_phrase(cm);
+    println!("{}", review_phrase);
 
     // TODO: make show_card returns bytes,
     // so that we can print everything together, without delay.
@@ -103,11 +113,7 @@ pub fn review_card(
     wait_for_anykey("show the answer")?;
 
     clear_screen()?;
-    println!(
-        "Reviewing {} from {}",
-        cm.card_ref.prompt_fingerprint,
-        cm.card_ref.source_path.display()
-    );
+    println!("{}", review_phrase);
 
     show_card(&card, output_settings)?;
 
