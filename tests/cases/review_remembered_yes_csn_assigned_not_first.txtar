@@ -52,6 +52,7 @@ RunLosrsReview
 -- actions/02_action_args --
 review $GRAPH_ROOT --at=2025-11-22T15:04:05.123456789Z
 -- actions/02_review_actions --
+exp_string,Reviewing card with serial number 3 from
 exp_string,Press any key to show the answer
 send, 
 flush,
