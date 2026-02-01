@@ -10,13 +10,12 @@ use rs_fsrs::Rating;
 use crate::output::show_card;
 use crate::output::show_card_prompt;
 use crate::settings::OutputSettings;
-use crate::storage::CardSerialNumAllocator;
-use crate::storage::extract_card_by_ref;
-use crate::storage::rewrite_card_meta;
+use crate::storage::StorageManager;
 use crate::terminal::ReviewResponse;
 use crate::terminal::clear_screen;
 use crate::terminal::wait_for_anykey;
 use crate::terminal::wait_for_review;
+use crate::types::Card;
 use crate::types::CardMetadata;
 use crate::types::FSRSMeta;
 use crate::types::SRSMeta;
@@ -70,11 +69,13 @@ fn format_reviewing_phrase(cm: &CardMetadata) -> String {
     match cm.card_ref.serial_num {
         Some(serial_num) => format!(
             "Reviewing card with serial number {} from {}",
-            serial_num, cm.card_ref.source_path.display()
+            serial_num,
+            cm.card_ref.source_path.display()
         ),
         None => format!(
             "Reviewing card with prompt fingerprint {} from {}",
-            cm.card_ref.prompt_fingerprint, cm.card_ref.source_path.display()
+            cm.card_ref.prompt_fingerprint,
+            cm.card_ref.source_path.display()
         ),
     }
 }
@@ -84,19 +85,20 @@ pub fn review_card(
     cm: &CardMetadata,
     reviewed_at: DateTime<FixedOffset>,
     output_settings: &OutputSettings,
-    serial_num_allocator: &mut dyn CardSerialNumAllocator,
+    storage_manager: &mut dyn StorageManager,
 ) -> Result<()> {
     // We construct ReviewableFSRSMeta early so as to not require user action
     // if card is unreviewable.
     let reviewable_fsrs_meta = ReviewableFSRSMeta::new(&cm.srs_meta.fsrs_meta, reviewed_at)?;
 
-    let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
+    let card_body = storage_manager.load_card_body_by_ref(&cm.card_ref).with_context(|| {
         format!(
             "When extracting card with fingerprint {} from {}",
             cm.card_ref.prompt_fingerprint,
             cm.card_ref.source_path.display(),
         )
     })?;
+    let card = Card { metadata: cm.clone(), body: card_body };
 
     clear_screen()?;
     let review_phrase = format_reviewing_phrase(cm);
@@ -120,7 +122,7 @@ pub fn review_card(
     let review_response = wait_for_review()?;
     let next_srs_meta = compute_next_srs_meta(&reviewable_fsrs_meta, &review_response);
 
-    rewrite_card_meta(&card.metadata.card_ref, &next_srs_meta, serial_num_allocator)?;
+    storage_manager.rewrite_card_meta(&card.metadata.card_ref, &next_srs_meta)?;
 
     Ok(())
 }
