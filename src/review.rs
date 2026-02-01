@@ -4,6 +4,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use chrono::DateTime;
 use chrono::FixedOffset;
+use chrono::Utc;
 use rs_fsrs::FSRS;
 use rs_fsrs::Rating;
 
@@ -49,13 +50,31 @@ impl<'a> ReviewableFSRSMeta<'a> {
     }
 }
 
+fn truncate_to_millis(dt: &DateTime<Utc>) -> DateTime<Utc> {
+    DateTime::<Utc>::from_timestamp_millis(dt.timestamp_millis()).unwrap()
+}
+
+fn clean_up_fsrs_meta(value: &FSRSMeta) -> FSRSMeta {
+    FSRSMeta {
+        due: truncate_to_millis(&value.due),
+        stability: (value.stability * 1000.0).round() / 1000.0,
+        difficulty: (value.difficulty * 1000.0).round() / 1000.0,
+        elapsed_days: value.elapsed_days,
+        scheduled_days: value.scheduled_days,
+        reps: value.reps,
+        lapses: value.lapses,
+        state: value.state,
+        last_review: truncate_to_millis(&value.last_review),
+    }
+}
+
 fn compute_next_fsrs_meta(fsrs_meta: &ReviewableFSRSMeta, resp: &ReviewResponse) -> FSRSMeta {
     let reviewed_at = fsrs_meta.reviewed_at;
     let fsrs_params = rs_fsrs::Parameters { enable_short_term: false, ..Default::default() };
     let fsrs = FSRS::new(fsrs_params);
 
     let next = fsrs.next(fsrs_meta.inner.clone(), reviewed_at.into(), resp.into());
-    next.card
+    clean_up_fsrs_meta(&next.card)
 }
 
 fn compute_next_srs_meta(fsrs_meta: &ReviewableFSRSMeta, resp: &ReviewResponse) -> SRSMeta {

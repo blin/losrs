@@ -7,9 +7,6 @@ use std::process;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
-use chrono::DateTime;
-use chrono::Utc;
-use serde::Serialize;
 use tempfile::NamedTempFile;
 
 use crate::settings::OutputFormat;
@@ -17,7 +14,6 @@ use crate::settings::OutputSettings;
 use crate::terminal::grab_term_size;
 use crate::types::Card;
 use crate::types::CardMetadata;
-use crate::types::FSRSMeta;
 use crate::types::SRSMeta;
 
 pub enum CardBodyParts {
@@ -341,39 +337,6 @@ fn format_card_logseq_text(
     Ok(())
 }
 
-#[derive(Serialize)]
-struct FSRSMetaForLogseq {
-    pub due: DateTime<Utc>,
-    pub stability: f64,
-    pub difficulty: f64,
-    pub elapsed_days: i64,
-    pub scheduled_days: i64,
-    pub reps: i32,
-    pub lapses: i32,
-    pub state: rs_fsrs::State,
-    pub last_review: DateTime<Utc>,
-}
-
-fn truncate_to_millis(dt: &DateTime<Utc>) -> DateTime<Utc> {
-    DateTime::<Utc>::from_timestamp_millis(dt.timestamp_millis()).unwrap()
-}
-
-impl From<&FSRSMeta> for FSRSMetaForLogseq {
-    fn from(value: &FSRSMeta) -> Self {
-        FSRSMetaForLogseq {
-            due: truncate_to_millis(&value.due),
-            stability: (value.stability * 1000.0).round() / 1000.0,
-            difficulty: (value.difficulty * 1000.0).round() / 1000.0,
-            elapsed_days: value.elapsed_days,
-            scheduled_days: value.scheduled_days,
-            reps: value.reps,
-            lapses: value.lapses,
-            state: value.state,
-            last_review: truncate_to_millis(&value.last_review),
-        }
-    }
-}
-
 fn format_card_logseq_srs_meta(
     mut writer: impl std::io::Write,
     srs_meta: &SRSMeta,
@@ -395,8 +358,11 @@ fn format_card_logseq_srs_meta(
     )?;
     writeln!(writer, "{indent}card-last-score:: {}", logseq_srs_meta.last_score)?;
 
-    let fsrs_meta: FSRSMetaForLogseq = (&srs_meta.fsrs_meta).into();
-    writeln!(writer, "{indent}card-fsrs-metadata:: {}", serde_json::to_string(&fsrs_meta)?)?;
+    writeln!(
+        writer,
+        "{indent}card-fsrs-metadata:: {}",
+        serde_json::to_string(&srs_meta.fsrs_meta)?
+    )?;
 
     Ok(())
 }
