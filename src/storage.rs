@@ -291,7 +291,7 @@ fn extract_card(
     })
 }
 
-pub fn extract_card_metadatas(path: Rc<PathBuf>) -> Result<Vec<CardMetadata>> {
+fn extract_card_metadatas(path: Rc<PathBuf>) -> Result<Vec<CardMetadata>> {
     let file_raw = fs::read_to_string(&*path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
 
@@ -317,7 +317,7 @@ pub fn extract_card_metadatas(path: Rc<PathBuf>) -> Result<Vec<CardMetadata>> {
     Ok(card_metadatas)
 }
 
-pub fn extract_card_by_ref(card_ref: &CardRef) -> Result<Card> {
+fn extract_card_by_ref(card_ref: &CardRef) -> Result<Card> {
     let file_raw = fs::read_to_string(&*card_ref.source_path)?;
     let file_raw_lines: Vec<&str> = file_raw.lines().collect();
 
@@ -336,61 +336,10 @@ pub fn extract_card_by_ref(card_ref: &CardRef) -> Result<Card> {
     ))
 }
 
-pub trait CardSerialNumAllocator {
+trait CardSerialNumAllocator {
     // None means we didn't attempt allocating a serial number,
     // because it does not make sense in the given context.
     fn allocate(&mut self) -> Option<Result<u64>>;
-}
-
-// TODO: wrap in an object
-pub fn rewrite_card_meta(
-    card_ref: &CardRef,
-    srs_meta: &SRSMeta,
-    serial_num_allocator: &mut dyn CardSerialNumAllocator,
-) -> Result<()> {
-    let file_raw = fs::read_to_string(&*card_ref.source_path)?;
-    let file_raw_lines: Vec<&str> = file_raw.lines().collect();
-
-    let card_list_items = find_card_list_items(&file_raw)?;
-
-    for li in card_list_items.as_slice() {
-        let mut card = extract_card(li, card_ref.source_path.clone(), &file_raw_lines)?;
-        if card.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
-            card.metadata.srs_meta = srs_meta.clone();
-            maybe_allocate_serial_num(&mut card, serial_num_allocator).with_context(|| {
-                anyhow!(
-                    "could not allocate serial number for card in {} with fingerprint {}",
-                    card_ref.source_path.display(),
-                    card_ref.prompt_fingerprint
-                )
-            })?;
-
-            let (p_lines, l_lines) = find_card_ranges(li)?;
-            let mut f = File::create(&*card_ref.source_path)?;
-
-            let pre_lines = &file_raw_lines[..p_lines.into_inner().0];
-            if !pre_lines.is_empty() {
-                f.write_all(pre_lines.join("\n").as_bytes())?;
-                f.write_all("\n".as_bytes())?;
-            }
-
-            format_card_logseq(&card, &mut f, &CardBodyParts::All)?;
-
-            let post_lines = &file_raw_lines[l_lines.into_inner().1 + 1..];
-            if !post_lines.is_empty() {
-                f.write_all(post_lines.join("\n").as_bytes())?;
-                f.write_all("\n".as_bytes())?;
-            }
-
-            return Ok(());
-        }
-    }
-
-    Err(anyhow!(
-        "Card with fingerprint {} was not found in {}.",
-        card_ref.prompt_fingerprint,
-        card_ref.source_path.display(),
-    ))
 }
 
 enum PageFiles {
@@ -435,19 +384,11 @@ fn find_page_files_inner(path: &Path) -> Result<PageFiles> {
     Ok(PageFiles::GraphRoot(path.to_path_buf(), page_files))
 }
 
-pub fn find_graph_root(path: &Path) -> Result<Option<PathBuf>> {
+fn find_graph_root(path: &Path) -> Result<Option<PathBuf>> {
     match find_page_files_inner(path)? {
         PageFiles::Single(_) => Ok(None),
         PageFiles::SingleInGraphRoot(graph_root, _) => Ok(Some(graph_root)),
         PageFiles::GraphRoot(graph_root, _) => Ok(Some(graph_root)),
-    }
-}
-
-pub fn find_page_files(path: &Path) -> Result<Vec<PathBuf>> {
-    match find_page_files_inner(path)? {
-        PageFiles::Single(page_path) => Ok(vec![page_path]),
-        PageFiles::SingleInGraphRoot(_, page_path) => Ok(vec![page_path]),
-        PageFiles::GraphRoot(_, page_paths) => Ok(page_paths),
     }
 }
 
@@ -500,9 +441,94 @@ impl CardSerialNumAllocator for GraphRootSerialNumAllocator {
     }
 }
 
-pub fn choose_serial_num_allocator(path: &Path) -> Result<Box<dyn CardSerialNumAllocator>> {
+fn choose_serial_num_allocator(path: &Path) -> Result<Box<dyn CardSerialNumAllocator>> {
     let Some(graph_root) = find_graph_root(path)? else {
         return Ok(Box::new(NoOpSerialNumAllocator {}));
     };
     Ok(Box::new(GraphRootSerialNumAllocator { graph_root }))
+}
+
+pub trait StorageManager {
+    fn load_card_metas(&self, page_file: &Path) -> Result<Vec<CardMetadata>>;
+    fn rewrite_card_meta(&mut self, card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<()>;
+    fn load_card_body_by_ref(&self, card_ref: &CardRef) -> Result<CardBody>;
+    fn find_page_files(&self, path: &Path) -> Result<Vec<PathBuf>>;
+}
+
+pub struct LogseqStorageManager {
+    serial_num_allocator: Box<dyn CardSerialNumAllocator>,
+}
+
+impl LogseqStorageManager {
+    pub fn new(path: &Path) -> Result<Self> {
+        Ok(Self { serial_num_allocator: choose_serial_num_allocator(path)? })
+    }
+}
+
+impl StorageManager for LogseqStorageManager {
+    fn load_card_metas(&self, page_file: &Path) -> Result<Vec<CardMetadata>> {
+        let card_metas = extract_card_metadatas(Rc::new(page_file.to_path_buf()))?;
+
+        Ok(card_metas)
+    }
+
+    fn rewrite_card_meta(&mut self, card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<()> {
+        let file_raw = fs::read_to_string(&*card_ref.source_path)?;
+        let file_raw_lines: Vec<&str> = file_raw.lines().collect();
+
+        let card_list_items = find_card_list_items(&file_raw)?;
+
+        for li in card_list_items.as_slice() {
+            let mut card = extract_card(li, card_ref.source_path.clone(), &file_raw_lines)?;
+            if card.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
+                card.metadata.srs_meta = srs_meta.clone();
+                maybe_allocate_serial_num(&mut card, self.serial_num_allocator.as_mut())
+                    .with_context(|| {
+                        anyhow!(
+                            "could not allocate serial number for card in {} with fingerprint {}",
+                            card_ref.source_path.display(),
+                            card_ref.prompt_fingerprint
+                        )
+                    })?;
+
+                let (p_lines, l_lines) = find_card_ranges(li)?;
+                let mut f = File::create(&*card_ref.source_path)?;
+
+                let pre_lines = &file_raw_lines[..p_lines.into_inner().0];
+                if !pre_lines.is_empty() {
+                    f.write_all(pre_lines.join("\n").as_bytes())?;
+                    f.write_all("\n".as_bytes())?;
+                }
+
+                format_card_logseq(&card, &mut f, &CardBodyParts::All)?;
+
+                let post_lines = &file_raw_lines[l_lines.into_inner().1 + 1..];
+                if !post_lines.is_empty() {
+                    f.write_all(post_lines.join("\n").as_bytes())?;
+                    f.write_all("\n".as_bytes())?;
+                }
+
+                return Ok(());
+            }
+        }
+
+        Err(anyhow!(
+            "Card with fingerprint {} was not found in {}.",
+            card_ref.prompt_fingerprint,
+            card_ref.source_path.display(),
+        ))
+    }
+
+    fn load_card_body_by_ref(&self, card_ref: &CardRef) -> Result<CardBody> {
+        let card = extract_card_by_ref(card_ref)?;
+        Ok(card.body)
+    }
+
+    fn find_page_files(&self, path: &Path) -> Result<Vec<PathBuf>> {
+        match find_page_files_inner(path)? {
+            PageFiles::Single(page_path) => Ok(vec![page_path]),
+            PageFiles::SingleInGraphRoot(_, page_path) => Ok(vec![page_path]),
+            PageFiles::GraphRoot(_, page_paths) => Ok(page_paths),
+        }
+    }
 }

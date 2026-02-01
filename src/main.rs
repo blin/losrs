@@ -1,6 +1,5 @@
 use std::path::Path;
 use std::path::PathBuf;
-use std::rc::Rc;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -12,10 +11,9 @@ use clap::Subcommand;
 
 use crate::output::show_card;
 use crate::settings::Settings;
-use crate::storage::choose_serial_num_allocator;
-use crate::storage::extract_card_by_ref;
-use crate::storage::extract_card_metadatas;
-use crate::storage::find_page_files;
+use crate::storage::LogseqStorageManager;
+use crate::storage::StorageManager;
+use crate::types::Card;
 use crate::types::CardMetadata;
 use crate::types::Fingerprint;
 
@@ -124,14 +122,18 @@ enum ConfigCommands {
     Path,
 }
 
-fn select_card_metadata(path: &Path, card_id: Option<CardId>) -> Result<Vec<CardMetadata>> {
-    let page_files: Vec<PathBuf> = find_page_files(path)?;
+fn select_card_metadata(
+    path: &Path,
+    card_id: Option<CardId>,
+    storage_manager: &dyn StorageManager,
+) -> Result<Vec<CardMetadata>> {
+    let page_files: Vec<PathBuf> = storage_manager.find_page_files(path)?;
     let mut all_card_metadatas: Vec<CardMetadata> = Vec::new();
     for page_file in page_files.into_iter() {
         // avoid copying page_file just so we can print it later
         let context = format!("when extracting card metadatas from {}", &page_file.display());
         let mut card_metadatas =
-            extract_card_metadatas(Rc::new(page_file)).with_context(|| context)?;
+            storage_manager.load_card_metas(&page_file).with_context(|| context)?;
 
         if let Some(card_id) = card_id.clone() {
             let p: Box<dyn Fn(&CardMetadata) -> bool> = match &card_id {
@@ -164,21 +166,22 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Show { card_ref: CardRefArgs { path, card_id } } => {
             let output_settings = settings.output;
-            let mut card_metas = select_card_metadata(&path, card_id)?;
+            let storage_manager = LogseqStorageManager::new(&path)?;
+            let mut card_metas = select_card_metadata(&path, card_id, &storage_manager)?;
             card_metas.sort_by(|a, b| a.card_ref.source_path.cmp(&b.card_ref.source_path));
             for cm in card_metas {
-                let card = extract_card_by_ref(&cm.card_ref).with_context(|| {
-                    format!(
-                        "When extracting card with fingerprint {} from {}",
-                        cm.card_ref.prompt_fingerprint,
-                        cm.card_ref.source_path.display(),
-                    )
-                })?;
-                show_card(&card, &output_settings)?
+                let card_body =
+                    storage_manager.load_card_body_by_ref(&cm.card_ref).with_context(|| {
+                        format!(
+                            "When extracting card with fingerprint {} from {}",
+                            cm.card_ref.prompt_fingerprint,
+                            cm.card_ref.source_path.display(),
+                        )
+                    })?;
+                show_card(&Card { metadata: cm, body: card_body }, &output_settings)?
             }
         }
         Commands::Review { card_ref: CardRefArgs { path, card_id }, at, up_to, seed } => {
-            let mut serial_num_allocator = choose_serial_num_allocator(&path)?;
             let output_settings = settings.output;
             let now = chrono::offset::Utc::now().fixed_offset();
             let (at, up_to) = match (at, up_to) {
@@ -188,12 +191,13 @@ fn main() -> Result<()> {
                 (Some(at), Some(up_to)) => (at, up_to),
             };
 
-            let mut card_metas = select_card_metadata(&path, card_id)?;
+            let mut storage_manager = LogseqStorageManager::new(&path)?;
+            let mut card_metas = select_card_metadata(&path, card_id, &storage_manager)?;
             match (|| -> Result<()> {
                 card_metas.retain(|cm| cm.srs_meta.logseq_srs_meta.next_schedule <= up_to);
                 shuffle_slice(&mut card_metas, seed.unwrap_or_default());
                 for cm in card_metas {
-                    review::review_card(&cm, at, &output_settings, serial_num_allocator.as_mut())?
+                    review::review_card(&cm, at, &output_settings, &mut storage_manager)?
                 }
                 Ok(())
             })() {
@@ -205,21 +209,18 @@ fn main() -> Result<()> {
             }
         }
         Commands::Metadata { card_ref: CardRefArgs { path, card_id } } => {
-            let card_metas = select_card_metadata(&path, card_id)?;
+            let storage_manager = LogseqStorageManager::new(&path)?;
+            let card_metas = select_card_metadata(&path, card_id, &storage_manager)?;
             for cm in card_metas {
                 output::show_metadata(&cm)?;
             }
         }
         Commands::FixMetadata { card_ref: CardRefArgs { path, card_id } } => {
-            let mut serial_num_allocator = choose_serial_num_allocator(&path)?;
-            let card_metas = select_card_metadata(&path, card_id)?;
+            let mut storage_manager = LogseqStorageManager::new(&path)?;
+            let card_metas = select_card_metadata(&path, card_id, &storage_manager)?;
             for cm in card_metas {
                 // TODO: detect cards that are in the same file with the same fingerprint and nope out
-                storage::rewrite_card_meta(
-                    &cm.card_ref,
-                    &cm.srs_meta,
-                    serial_num_allocator.as_mut(),
-                )?;
+                storage_manager.rewrite_card_meta(&cm.card_ref, &cm.srs_meta)?;
             }
         }
         Commands::Config { command } => match command {
