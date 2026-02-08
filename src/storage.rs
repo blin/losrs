@@ -118,9 +118,12 @@ fn range_from_position(position: &markdown::unist::Position) -> RangeInclusive<u
     RangeInclusive::new(position.start.line - 1, position.end.line - 1)
 }
 
-fn find_card_ranges(
-    card: &mdast::ListItem,
-) -> Result<(RangeInclusive<usize>, RangeInclusive<usize>)> {
+struct CardLineRanges {
+    prompt_range: RangeInclusive<usize>,
+    response_range: RangeInclusive<usize>,
+}
+
+fn find_card_ranges(card: &mdast::ListItem) -> Result<CardLineRanges> {
     // TODO: allow multiple paragraphs followed by a list
     // take until list?
     let (prompt_paragraph, response_list) = match card.children.as_slice() {
@@ -145,23 +148,23 @@ fn find_card_ranges(
         .ok_or_else(|| anyhow!("The p somehow didn't have a position"))?;
     let l_range = range_from_position(l_position);
 
-    Ok((p_range, l_range))
+    Ok(CardLineRanges { prompt_range: p_range, response_range: l_range })
 }
 
 fn destructure_card<'a>(
     card: &mdast::ListItem,
     file_raw_lines: &'a [&'a str],
 ) -> Result<(&'a [&'a str], &'a [&'a str])> {
-    let (p_range, l_range) = find_card_ranges(card)?;
-    let Some(p_lines) = file_raw_lines.get(p_range) else {
+    let ranges = find_card_ranges(card)?;
+    let Some(prompt_lines) = file_raw_lines.get(ranges.prompt_range) else {
         return Err(anyhow!("Failed to get prompt lines"));
     };
 
-    let Some(l_lines) = file_raw_lines.get(l_range) else {
-        return Err(anyhow!("Failed to get response list lines"));
+    let Some(response_lines) = file_raw_lines.get(ranges.response_range) else {
+        return Err(anyhow!("Failed to get response lines"));
     };
 
-    Ok((p_lines, l_lines))
+    Ok((prompt_lines, response_lines))
 }
 
 fn is_metadata_line(l: &str) -> bool {
@@ -251,7 +254,13 @@ fn maybe_allocate_serial_num(
     let Some(serial_num) = serial_num_allocator.allocate() else {
         return Ok(());
     };
-    let serial_num = serial_num?;
+    let serial_num = serial_num.with_context(|| {
+        anyhow!(
+            "could not allocate serial number for card in {} with fingerprint {}",
+            card.metadata.card_ref.source_path.display(),
+            card.metadata.card_ref.prompt_fingerprint
+        )
+    })?;
     card.metadata.card_ref.serial_num = Some(serial_num);
     card.body.prompt = CARD_SERIAL_NUM_RE
         .replace(&card.body.prompt, format!("#card <!-- CSN:{} -->", serial_num))
@@ -291,14 +300,73 @@ fn extract_card(
     })
 }
 
+struct Page {
+    file_raw: String,
+    card_list_items: Vec<mdast::ListItem>,
+}
+
+impl Page {
+    fn from(path: &Path) -> Result<Self> {
+        let file_raw = fs::read_to_string(path)?;
+
+        let card_list_items = find_card_list_items(&file_raw)
+            .with_context(|| anyhow!("when searching for card list items"))?;
+        Ok(Page { file_raw, card_list_items })
+    }
+
+    fn get_lines(&self) -> Vec<&str> {
+        self.file_raw.lines().collect()
+    }
+
+    fn find_card(&self, card_ref: &CardRef) -> Result<(CardLineRanges, Card)> {
+        let file_raw_lines = self.get_lines();
+        for li in &self.card_list_items {
+            let card = extract_card(li, card_ref.source_path.clone(), &file_raw_lines)?;
+            if card.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
+                let card_ranges = find_card_ranges(li)?;
+                return Ok((card_ranges, card));
+            }
+        }
+        Err(anyhow!(
+            "Card with fingerprint {} was not found in {}.",
+            card_ref.prompt_fingerprint,
+            card_ref.source_path.display(),
+        ))
+    }
+
+    fn rewrite_card(
+        &self,
+        path: &Path,
+        card_ranges: &CardLineRanges,
+        format_card: impl FnOnce(&mut dyn std::io::Write) -> Result<()>,
+    ) -> Result<()> {
+        let file_raw_lines = self.get_lines();
+        let mut f = File::create(path)?;
+
+        let pre_lines = &file_raw_lines[..*card_ranges.prompt_range.start()];
+        if !pre_lines.is_empty() {
+            f.write_all(pre_lines.join("\n").as_bytes())?;
+            f.write_all("\n".as_bytes())?;
+        }
+
+        format_card(&mut f)?;
+
+        let post_lines = &file_raw_lines[*card_ranges.response_range.end() + 1..];
+        if !post_lines.is_empty() {
+            f.write_all(post_lines.join("\n").as_bytes())?;
+            f.write_all("\n".as_bytes())?;
+        }
+
+        Ok(())
+    }
+}
+
 fn extract_card_metadatas(path: Rc<PathBuf>) -> Result<Vec<CardMetadata>> {
-    let file_raw = fs::read_to_string(&*path)?;
-    let file_raw_lines: Vec<&str> = file_raw.lines().collect();
+    let page = Page::from(&path)?;
 
-    let card_list_items = find_card_list_items(&file_raw)
-        .with_context(|| anyhow!("when searching for card list items"))?;
-
-    let cards = card_list_items
+    let file_raw_lines = page.get_lines();
+    let cards = page
+        .card_list_items
         .iter()
         .map(|li| {
             extract_card(li, path.clone(), &file_raw_lines).with_context(|| {
@@ -315,25 +383,6 @@ fn extract_card_metadatas(path: Rc<PathBuf>) -> Result<Vec<CardMetadata>> {
     let card_metadatas = cards.into_iter().map(|c| c.metadata).collect();
 
     Ok(card_metadatas)
-}
-
-fn extract_card_by_ref(card_ref: &CardRef) -> Result<Card> {
-    let file_raw = fs::read_to_string(&*card_ref.source_path)?;
-    let file_raw_lines: Vec<&str> = file_raw.lines().collect();
-
-    let card_list_items = find_card_list_items(&file_raw)?;
-
-    for li in card_list_items.as_slice() {
-        let c = extract_card(li, card_ref.source_path.clone(), &file_raw_lines)?;
-        if c.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
-            return Ok(c);
-        }
-    }
-    Err(anyhow!(
-        "Card with fingerprint {} was not found in {}.",
-        card_ref.prompt_fingerprint,
-        card_ref.source_path.display(),
-    ))
 }
 
 trait CardSerialNumAllocator {
@@ -473,54 +522,23 @@ impl StorageManager for LogseqStorageManager {
     }
 
     fn rewrite_card_meta(&mut self, card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<()> {
-        let file_raw = fs::read_to_string(&*card_ref.source_path)?;
-        let file_raw_lines: Vec<&str> = file_raw.lines().collect();
+        let page = Page::from(&card_ref.source_path)?;
 
-        let card_list_items = find_card_list_items(&file_raw)?;
+        let (card_ranges, mut card) = page.find_card(card_ref)?;
+        card.metadata.srs_meta = srs_meta.clone();
 
-        for li in card_list_items.as_slice() {
-            let mut card = extract_card(li, card_ref.source_path.clone(), &file_raw_lines)?;
-            if card.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
-                card.metadata.srs_meta = srs_meta.clone();
-                maybe_allocate_serial_num(&mut card, self.serial_num_allocator.as_mut())
-                    .with_context(|| {
-                        anyhow!(
-                            "could not allocate serial number for card in {} with fingerprint {}",
-                            card_ref.source_path.display(),
-                            card_ref.prompt_fingerprint
-                        )
-                    })?;
+        maybe_allocate_serial_num(&mut card, self.serial_num_allocator.as_mut())?;
 
-                let (p_lines, l_lines) = find_card_ranges(li)?;
-                let mut f = File::create(&*card_ref.source_path)?;
+        page.rewrite_card(&card_ref.source_path, &card_ranges, |w| {
+            format_card_logseq(&card, w, &CardBodyParts::All)
+        })?;
 
-                let pre_lines = &file_raw_lines[..p_lines.into_inner().0];
-                if !pre_lines.is_empty() {
-                    f.write_all(pre_lines.join("\n").as_bytes())?;
-                    f.write_all("\n".as_bytes())?;
-                }
-
-                format_card_logseq(&card, &mut f, &CardBodyParts::All)?;
-
-                let post_lines = &file_raw_lines[l_lines.into_inner().1 + 1..];
-                if !post_lines.is_empty() {
-                    f.write_all(post_lines.join("\n").as_bytes())?;
-                    f.write_all("\n".as_bytes())?;
-                }
-
-                return Ok(());
-            }
-        }
-
-        Err(anyhow!(
-            "Card with fingerprint {} was not found in {}.",
-            card_ref.prompt_fingerprint,
-            card_ref.source_path.display(),
-        ))
+        Ok(())
     }
 
     fn load_card_body_by_ref(&self, card_ref: &CardRef) -> Result<CardBody> {
-        let card = extract_card_by_ref(card_ref)?;
+        let page = Page::from(&card_ref.source_path)?;
+        let (_card_ranges, card) = page.find_card(card_ref)?;
         Ok(card.body)
     }
 
