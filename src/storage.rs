@@ -530,7 +530,7 @@ impl StorageManager for LogseqStorageManager {
         maybe_allocate_serial_num(&mut card, self.serial_num_allocator.as_mut())?;
 
         page.rewrite_card(&card_ref.source_path, &card_ranges, |w| {
-            format_card_logseq(&card, w, &CardBodyParts::All)
+            format_card_logseq(&card, w, CardBodyParts::ALL)
         })?;
 
         Ok(())
