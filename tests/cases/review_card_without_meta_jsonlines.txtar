@@ -1,0 +1,89 @@
+-- losrs.toml --
+[output]
+format = "clean"
+[storage]
+metadata_mode = "in-graph-root"
+-- pages/Sphere.md --
+- Not card
+- What is a sphere? #card
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+-- actions/01_action_name --
+RunLosrs
+-- actions/01_action_args --
+metadata $GRAPH_ROOT
+-- actions/01_expected_stdout --
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/Sphere.md",
+    "prompt_fingerprint": "0xb9de554a02212aca",
+    "serial_num": null
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 0.0,
+      "repeats": 0,
+      "ease_factor": 2.5,
+      "next_schedule": "1970-01-01T00:00:00Z",
+      "last_reviewed": "1970-01-01T00:00:00Z",
+      "last_score": 5
+    },
+    "fsrs_meta": {
+      "due": "1970-01-01T00:00:00Z",
+      "stability": 0.0,
+      "difficulty": 0.0,
+      "elapsed_days": 0,
+      "scheduled_days": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "New",
+      "last_review": "1970-01-01T00:00:00Z"
+    }
+  }
+}
+-- actions/02_action_name --
+RunLosrsReview
+-- actions/02_action_args --
+review $GRAPH_ROOT --at=2025-11-22T15:04:05.123456789Z
+-- actions/02_review_actions --
+exp_string,Press any key to show the answer
+send, 
+flush,
+exp_string,How much effort did recall require?
+exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall
+send,2
+flush,
+read_all,
+-- actions/03_action_name --
+RunLosrs
+-- actions/03_action_args --
+metadata $GRAPH_ROOT
+-- actions/03_expected_stdout --
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/Sphere.md",
+    "prompt_fingerprint": "0x481b8539d850822f",
+    "serial_num": 0
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 3.0,
+      "repeats": 1,
+      "ease_factor": 2.5,
+      "next_schedule": "2025-11-25T15:04:05.123Z",
+      "last_reviewed": "2025-11-22T15:04:05.123Z",
+      "last_score": 5
+    },
+    "fsrs_meta": {
+      "due": "2025-11-25T15:04:05.123Z",
+      "stability": 3.126,
+      "difficulty": 5.315,
+      "elapsed_days": 0,
+      "scheduled_days": 3,
+      "reps": 1,
+      "lapses": 0,
+      "state": "Review",
+      "last_review": "2025-11-22T15:04:05.123Z"
+    }
+  }
+}

@@ -161,3 +161,9 @@ pub struct Card {
     pub metadata: CardMetadata,
     pub body: CardBody,
 }
+
+#[derive(Clone)]
+pub enum CardId {
+    Fingerprint(Fingerprint),
+    SerialNum(u64),
+}
