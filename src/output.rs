@@ -16,14 +16,18 @@ use crate::types::Card;
 use crate::types::CardMetadata;
 use crate::types::SRSMeta;
 
-pub enum CardBodyParts {
-    Prompt,
-    All,
+bitflags::bitflags! {
+    pub struct CardBodyParts: u8 {
+        const PROMPT   = 0b001;
+        const SRS_META = 0b010;
+        const RESPONSE = 0b100;
+        const ALL = Self::PROMPT.bits() | Self::SRS_META.bits() | Self::RESPONSE.bits();
+    }
 }
 
 fn show_card_inner(
     card: &Card,
-    card_body_parts: &CardBodyParts,
+    card_body_parts: CardBodyParts,
     output_settings: &OutputSettings,
 ) -> Result<()> {
     let mut result = Vec::new();
@@ -42,11 +46,11 @@ fn show_card_inner(
 }
 
 pub fn show_card(card: &Card, output_settings: &OutputSettings) -> Result<()> {
-    show_card_inner(card, &CardBodyParts::All, output_settings)
+    show_card_inner(card, CardBodyParts::ALL, output_settings)
 }
 
 pub fn show_card_prompt(card: &Card, output_settings: &OutputSettings) -> Result<()> {
-    show_card_inner(card, &CardBodyParts::Prompt, output_settings)
+    show_card_inner(card, CardBodyParts::PROMPT, output_settings)
 }
 
 pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
@@ -54,30 +58,32 @@ pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
     Ok(())
 }
 
+fn card_to_markdown(card: &Card, card_body_parts: CardBodyParts) -> String {
+    let mut parts = Vec::new();
+    if card_body_parts.contains(CardBodyParts::PROMPT) {
+        parts.push(card.body.prompt.as_str());
+    }
+    if card_body_parts.contains(CardBodyParts::RESPONSE) {
+        parts.push(card.body.response.as_str());
+    }
+    parts.join("\n")
+}
+
 pub fn format_card_clean(
     card: &Card,
     mut writer: impl std::io::Write,
-    card_body_parts: &CardBodyParts,
+    card_body_parts: CardBodyParts,
 ) -> Result<()> {
-    match card_body_parts {
-        CardBodyParts::Prompt => writeln!(writer, "{}", card.body.prompt)?,
-        CardBodyParts::All => {
-            writeln!(writer, "{}", card.body.prompt)?;
-            writeln!(writer, "{}", card.body.response)?;
-        }
-    }
+    writeln!(writer, "{}", card_to_markdown(card, card_body_parts))?;
     Ok(())
 }
 
 pub fn format_card_typst(
     card: &Card,
     mut writer: impl std::io::Write,
-    card_body_parts: &CardBodyParts,
+    card_body_parts: CardBodyParts,
 ) -> Result<()> {
-    let markdown = match card_body_parts {
-        CardBodyParts::Prompt => card.body.prompt.clone(),
-        CardBodyParts::All => format!("{}\n{}", card.body.prompt, card.body.response),
-    };
+    let markdown = card_to_markdown(card, card_body_parts);
     let typst = markdown_to_typst(markdown)
         .with_context(|| "failed to convert markdown to typst using pandoc".to_owned())?;
     write!(writer, "{}", typst)?;
@@ -86,14 +92,10 @@ pub fn format_card_typst(
 
 fn card_to_png(
     card: &Card,
-    card_body_parts: &CardBodyParts,
+    card_body_parts: CardBodyParts,
     output_settings: &OutputSettings,
 ) -> Result<Vec<u8>> {
-    let markdown = match card_body_parts {
-        CardBodyParts::Prompt => card.body.prompt.clone(),
-        CardBodyParts::All => format!("{}\n{}", card.body.prompt, card.body.response),
-    };
-
+    let markdown = card_to_markdown(card, card_body_parts);
     let typst = markdown_to_typst(markdown)
         .with_context(|| "failed to convert markdown to typst using pandoc".to_owned())?;
 
@@ -131,7 +133,7 @@ fn card_to_png(
 pub fn format_card_sixel(
     card: &Card,
     mut writer: impl std::io::Write,
-    card_body_parts: &CardBodyParts,
+    card_body_parts: CardBodyParts,
     output_settings: &OutputSettings,
 ) -> Result<()> {
     let png_buf = card_to_png(card, card_body_parts, output_settings)?;
@@ -144,7 +146,7 @@ pub fn format_card_sixel(
 
 pub fn show_card_kitty_or_iterm(
     card: &Card,
-    card_body_parts: &CardBodyParts,
+    card_body_parts: CardBodyParts,
     output_settings: &OutputSettings,
 ) -> Result<()> {
     use image::ImageReader;
@@ -370,17 +372,19 @@ fn format_card_logseq_srs_meta(
 pub fn format_card_logseq(
     card: &Card,
     mut writer: impl std::io::Write,
-    card_body_parts: &CardBodyParts,
+    card_body_parts: CardBodyParts,
 ) -> Result<()> {
-    // format_card_logseq does not accept a CardBodyPart, as the card is always stored with all parts
-    if let CardBodyParts::Prompt = card_body_parts {
-        return Err(anyhow!("can not output just the prompt in logseq format"));
-    }
     let prompt_indent = " ".repeat(card.body.prompt_indent);
     let meta_indent = " ".repeat(card.body.prompt_indent + 2);
-    format_card_logseq_text(&mut writer, &card.body.prompt, &prompt_indent)?;
-    format_card_logseq_srs_meta(&mut writer, &card.metadata.srs_meta, &meta_indent)?;
-    format_card_logseq_text(&mut writer, &card.body.response, &prompt_indent)?;
+    if card_body_parts.contains(CardBodyParts::PROMPT) {
+        format_card_logseq_text(&mut writer, &card.body.prompt, &prompt_indent)?;
+    }
+    if card_body_parts.contains(CardBodyParts::SRS_META) {
+        format_card_logseq_srs_meta(&mut writer, &card.metadata.srs_meta, &meta_indent)?;
+    }
+    if card_body_parts.contains(CardBodyParts::RESPONSE) {
+        format_card_logseq_text(&mut writer, &card.body.response, &prompt_indent)?;
+    }
 
     Ok(())
 }
