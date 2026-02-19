@@ -10,6 +10,7 @@ RunLosrs
 config show
 -- actions/01_action_envs --
 LOSRS__OUTPUT__FORMAT=typst
+LOSRS__STORAGE__METADATA_MODE=in-graph-root
 -- actions/01_expected_stdout --
 {
   "output": {
@@ -17,5 +18,8 @@ LOSRS__OUTPUT__FORMAT=typst
     "ppi": 96.0,
     "base_font_size": 12,
     "line_height_scaling": 1.2
+  },
+  "storage": {
+    "metadata_mode": "in-graph-root"
   }
 }
