@@ -7,6 +7,7 @@ use serde::Serialize;
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Settings {
     pub output: OutputSettings,
+    pub storage: StorageSettings,
 }
 
 impl Settings {
@@ -72,5 +73,23 @@ impl Default for OutputSettings {
             base_font_size: 12,
             line_height_scaling: 1.2,
         }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum MetadataMode {
+    Inline,
+    InGraphRoot,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct StorageSettings {
+    pub metadata_mode: MetadataMode,
+}
+
+impl Default for StorageSettings {
+    fn default() -> Self {
+        Self { metadata_mode: MetadataMode::Inline }
     }
 }

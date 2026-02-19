@@ -1,0 +1,75 @@
+-- losrs.toml --
+[storage]
+metadata_mode = "in-graph-root"
+-- .card-serial-num --
+5
+-- .card-metadata.jsonl --
+{ "serial_num": 5, "fsrs_meta": { "due": "2025-11-27T00:00:00Z", "stability": 244.14, "difficulty": 5.0, "elapsed_days": 244, "scheduled_days": 244, "reps": 6, "lapses": 0, "state": "Review", "last_review": "2025-03-28T07:46:41.223Z" } }
+-- pages/0.md --
+- Not card
+- What is a sphere? #card
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- What is the volume of a sphere (symbolic)? #card <!-- CSN:5 -->
+  - $$V = \frac{4}{3} \pi r^3$$
+- Not card
+-- actions/01_action_name --
+RunLosrs
+-- actions/01_action_args --
+metadata $GRAPH_ROOT
+-- actions/01_expected_stdout --
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/0.md",
+    "prompt_fingerprint": "0xb9de554a02212aca",
+    "serial_num": null
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 0.0,
+      "repeats": 0,
+      "ease_factor": 2.5,
+      "next_schedule": "1970-01-01T00:00:00Z",
+      "last_reviewed": "1970-01-01T00:00:00Z",
+      "last_score": 5
+    },
+    "fsrs_meta": {
+      "due": "1970-01-01T00:00:00Z",
+      "stability": 0.0,
+      "difficulty": 0.0,
+      "elapsed_days": 0,
+      "scheduled_days": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "New",
+      "last_review": "1970-01-01T00:00:00Z"
+    }
+  }
+}
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/0.md",
+    "prompt_fingerprint": "0x7e7f6c73cea43876",
+    "serial_num": 5
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 244.0,
+      "repeats": 6,
+      "ease_factor": 2.5,
+      "next_schedule": "2025-11-27T00:00:00Z",
+      "last_reviewed": "2025-03-28T07:46:41.223Z",
+      "last_score": 5
+    },
+    "fsrs_meta": {
+      "due": "2025-11-27T00:00:00Z",
+      "stability": 244.14,
+      "difficulty": 5.0,
+      "elapsed_days": 244,
+      "scheduled_days": 244,
+      "reps": 6,
+      "lapses": 0,
+      "state": "Review",
+      "last_review": "2025-03-28T07:46:41.223Z"
+    }
+  }
+}
