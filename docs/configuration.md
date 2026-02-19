@@ -59,3 +59,19 @@ Used with image based formats.
 [default: 1.2]
 
 [ENV: LOSRS__OUTPUT__LINE_HEIGHT_SCALING]
+
+## storage
+
+### metadata_mode
+
+Where the metadata will be written.
+
+"inline" stores metadata within each card.
+
+"in-graph-root" stores metadata in a single file in graph root.
+
+[default: inline]
+
+[possible values: inline, in-graph-root]
+
+[ENV: LOSRS__STORAGE__METADATA_MODE]
