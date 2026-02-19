@@ -104,7 +104,7 @@ pub fn review_card(
     cm: &CardMetadata,
     reviewed_at: DateTime<FixedOffset>,
     output_settings: &OutputSettings,
-    storage_manager: &mut dyn StorageManager,
+    storage_manager: &mut StorageManager,
 ) -> Result<()> {
     // We construct ReviewableFSRSMeta early so as to not require user action
     // if card is unreviewable.
