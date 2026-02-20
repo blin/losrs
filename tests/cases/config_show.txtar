@@ -15,5 +15,8 @@ config show
     "ppi": 96.0,
     "base_font_size": 12,
     "line_height_scaling": 1.2
+  },
+  "storage": {
+    "metadata_mode": "inline"
   }
 }
