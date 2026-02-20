@@ -54,6 +54,7 @@ enum ReviewAction {
     SendControl(char),
     Flush,
     ReadLine,
+    ReadAll,
 }
 
 impl ReviewAction {
@@ -72,6 +73,7 @@ impl ReviewAction {
             }
             "flush" => Ok(ReviewAction::Flush),
             "read_line" => Ok(ReviewAction::ReadLine),
+            "read_all" => Ok(ReviewAction::ReadAll),
             _ => Err(anyhow!("unknown review action: {}", review_action_name)),
         }
     }
@@ -91,6 +93,10 @@ impl ReviewAction {
             }
             ReviewAction::ReadLine => {
                 p.read_line()?;
+            }
+            ReviewAction::ReadAll => {
+                let text = p.exp_eof()?;
+                println!("{}", text);
             }
         }
         Ok(())
@@ -259,7 +265,9 @@ fn test_file_inner(file_name: &str) -> Result<()> {
     );
 
     let graph_root = TempDir::new()?;
-    archive.materialize(graph_root.path())?;
+    archive
+        .materialize(graph_root.path())
+        .with_context(|| format!("when trying to materialize {}", path.display()))?;
 
     let actions = parse_actions(graph_root.path())?;
     for action in actions {
@@ -306,8 +314,9 @@ test_file!(show_format_typst, "show_format_typst.txtar");
 test_file!(show_multiple_page_files, "show_multiple_page_files.txtar");
 test_file!(show_with_fingerprint, "show_with_fingerprint.txtar");
 
-test_file!(metadata_help, "metadata_help.txtar");
 test_file!(metadata, "metadata.txtar");
+test_file!(metadata_help, "metadata_help.txtar");
+test_file!(metadata_jsonlines, "metadata_jsonlines.txtar");
 
 test_file!(config_help, "config_help.txtar");
 test_file!(config_show, "config_show.txtar");
@@ -321,8 +330,10 @@ test_file!(review_card_not_due, "review_card_not_due.txtar");
 test_file!(review_card_not_due_early, "review_card_not_due_early.txtar");
 test_file!(review_card_second_remembered_no, "review_card_second_remembered_no.txtar");
 test_file!(review_card_seed_0, "review_card_seed_0.txtar");
+test_file!(review_card_seed_0_jsonlines, "review_card_seed_0_jsonlines.txtar");
 test_file!(review_card_seed_100, "review_card_seed_100.txtar");
 test_file!(review_card_without_meta_remembered_no, "review_card_without_meta_remembered_no.txtar");
+test_file!(review_card_without_meta_jsonlines, "review_card_without_meta_jsonlines.txtar");
 test_file!(
     review_card_without_meta_remembered_yes,
     "review_card_without_meta_remembered_yes.txtar"

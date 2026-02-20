@@ -128,7 +128,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Show { card_ref: CardRefArgs { path, card_id } } => {
-            let storage_manager = StorageManager::new(&path)?;
+            let storage_manager = StorageManager::new(&path, &settings.storage)?;
             let mut card_metas = storage_manager.select_card_metadata(&path, card_id)?;
             card_metas.sort_by(|a, b| a.card_ref.source_path.cmp(&b.card_ref.source_path));
             for cm in card_metas {
@@ -144,7 +144,7 @@ fn main() -> Result<()> {
             }
         }
         Commands::Review { card_ref: CardRefArgs { path, card_id }, at, up_to, seed } => {
-            let mut storage_manager = StorageManager::new(&path)?;
+            let mut storage_manager = StorageManager::new(&path, &settings.storage)?;
             let now = chrono::offset::Utc::now().fixed_offset();
             let (at, up_to) = match (at, up_to) {
                 (None, None) => (now, now),
@@ -169,14 +169,14 @@ fn main() -> Result<()> {
             }
         }
         Commands::Metadata { card_ref: CardRefArgs { path, card_id } } => {
-            let storage_manager = StorageManager::new(&path)?;
+            let storage_manager = StorageManager::new(&path, &settings.storage)?;
             let card_metas = storage_manager.select_card_metadata(&path, card_id)?;
             for cm in card_metas {
                 output::show_metadata(&cm)?;
             }
         }
         Commands::FixMetadata { card_ref: CardRefArgs { path, card_id } } => {
-            let mut storage_manager = StorageManager::new(&path)?;
+            let mut storage_manager = StorageManager::new(&path, &settings.storage)?;
             let card_metas = storage_manager.select_card_metadata(&path, card_id)?;
             for cm in card_metas {
                 // TODO: detect cards that are in the same file with the same fingerprint and nope out
