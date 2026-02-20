@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -22,9 +23,13 @@ use markdown::mdast::Node;
 use markdown::mdast::{self};
 use markdown::to_mdast;
 use regex::Regex;
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::output::CardBodyParts;
 use crate::output::format_card_logseq;
+use crate::settings::MetadataMode;
+use crate::settings::StorageSettings;
 use crate::types::Card;
 use crate::types::CardBody;
 use crate::types::CardId;
@@ -353,8 +358,9 @@ impl Page {
 
     fn rewrite_card(
         &self,
+        card: &Card,
         card_ranges: &CardLineRanges,
-        format_card: impl FnOnce(&mut dyn std::io::Write) -> Result<()>,
+        card_body_parts: CardBodyParts,
     ) -> Result<()> {
         let file_raw_lines = self.get_lines();
         let mut f = File::create(self.path.as_ref())?;
@@ -365,7 +371,7 @@ impl Page {
             f.write_all("\n".as_bytes())?;
         }
 
-        format_card(&mut f)?;
+        format_card_logseq(card, &f, card_body_parts)?;
 
         let post_lines = &file_raw_lines[*card_ranges.response_range.end() + 1..];
         if !post_lines.is_empty() {
@@ -489,13 +495,34 @@ fn choose_serial_num_allocator(path: &Path) -> Result<Box<dyn CardSerialNumAlloc
     Ok(Box::new(GraphRootSerialNumAllocator { graph_root }))
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct InGraphRootCardMetadata {
+    serial_num: u64,
+    fsrs_meta: FSRSMeta,
+}
+
+enum MetadataSource {
+    PageFiles,
+    GraphRoot(PathBuf),
+}
+
 pub struct StorageManager {
     serial_num_allocator: Box<dyn CardSerialNumAllocator>,
+    metadata_source: MetadataSource,
 }
 
 impl StorageManager {
-    pub fn new(path: &Path) -> Result<Self> {
-        Ok(Self { serial_num_allocator: choose_serial_num_allocator(path)? })
+    pub fn new(path: &Path, settings: &StorageSettings) -> Result<Self> {
+        let metadata_source: MetadataSource = match settings.metadata_mode {
+            MetadataMode::Inline => MetadataSource::PageFiles,
+            MetadataMode::InGraphRoot => {
+                let Some(graph_root) = find_graph_root(path)? else {
+                    return Err(anyhow!("there is no graph root for {}", path.display()));
+                };
+                MetadataSource::GraphRoot(graph_root)
+            }
+        };
+        Ok(Self { serial_num_allocator: choose_serial_num_allocator(path)?, metadata_source })
     }
 
     pub fn find_page_files(&self, path: &Path) -> Result<Vec<PathBuf>> {
@@ -518,8 +545,84 @@ impl StorageManager {
         Ok(card.body)
     }
 
+    fn get_card_metadata_path(graph_root: &Path) -> PathBuf {
+        graph_root.join(".card-metadata.jsonl")
+    }
+
+    fn load_fsrs_metas(graph_root: &Path) -> Result<BTreeMap<u64, FSRSMeta>> {
+        let card_metadata_path = Self::get_card_metadata_path(graph_root);
+
+        if !card_metadata_path.exists() {
+            // Will create on first write
+            return Ok(BTreeMap::new());
+        }
+
+        let mut fsrs_metas_by_csn: BTreeMap<u64, FSRSMeta> = BTreeMap::new();
+        for line in fs::read_to_string(&card_metadata_path)?.lines() {
+            let cm: InGraphRootCardMetadata = serde_json::from_str(line)?;
+            fsrs_metas_by_csn.insert(cm.serial_num, cm.fsrs_meta);
+        }
+        Ok(fsrs_metas_by_csn)
+    }
+
+    fn store_fsrs_metas(graph_root: &Path, fsrs_metas: BTreeMap<u64, FSRSMeta>) -> Result<()> {
+        assert!(!fsrs_metas.is_empty());
+        let card_metadata_path = Self::get_card_metadata_path(graph_root);
+
+        let mut card_metadata_file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(&card_metadata_path)
+            .with_context(|| {
+                anyhow!("when opening {} for writing", card_metadata_path.display())
+            })?;
+
+        // BTreeMap guarantees that metadata is written in serial_num order
+        for (csn, fsrs_meta) in fsrs_metas.into_iter() {
+            let v = InGraphRootCardMetadata { serial_num: csn, fsrs_meta };
+            let cm = serde_json::to_string(&v)?;
+            card_metadata_file.write_all(cm.as_bytes())?;
+            card_metadata_file.write_all(b"\n")?;
+        }
+        card_metadata_file.sync_all()?;
+
+        Ok(())
+    }
+
+    fn merge_page_and_graph_root_card_metas(
+        page_card_metas: Vec<CardMetadata>,
+        mut graph_root_card_metas_by_csn: BTreeMap<u64, FSRSMeta>,
+    ) -> Vec<CardMetadata> {
+        let mut card_metas: Vec<CardMetadata> = Vec::new();
+        for page_card_meta in page_card_metas {
+            let Some(csn) = page_card_meta.card_ref.serial_num else {
+                card_metas.push(page_card_meta);
+                continue;
+            };
+            let Some(fsrs_meta) = graph_root_card_metas_by_csn.remove(&csn) else {
+                card_metas.push(page_card_meta);
+                continue;
+            };
+            card_metas.push(CardMetadata {
+                card_ref: page_card_meta.card_ref,
+                srs_meta: SRSMeta { logseq_srs_meta: (&fsrs_meta).into(), fsrs_meta },
+            });
+        }
+        card_metas
+    }
+
     pub fn load_card_metas(&self, page_file: &Path) -> Result<Vec<CardMetadata>> {
-        self.load_card_metas_from_page(page_file)
+        let page_card_metas = self.load_card_metas_from_page(page_file)?;
+        match &self.metadata_source {
+            MetadataSource::PageFiles => Ok(page_card_metas),
+            MetadataSource::GraphRoot(graph_root) => {
+                Ok(Self::merge_page_and_graph_root_card_metas(
+                    page_card_metas,
+                    Self::load_fsrs_metas(graph_root)?,
+                ))
+            }
+        }
     }
 
     pub fn rewrite_card_meta(&mut self, card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<()> {
@@ -528,9 +631,23 @@ impl StorageManager {
         card.metadata.srs_meta = srs_meta.clone();
         maybe_allocate_serial_num(&mut card, self.serial_num_allocator.as_mut())?;
 
-        page.rewrite_card(&card_ranges, |w| format_card_logseq(&card, w, CardBodyParts::ALL))?;
+        match &self.metadata_source {
+            MetadataSource::PageFiles => {
+                page.rewrite_card(&card, &card_ranges, CardBodyParts::ALL)
+            }
+            MetadataSource::GraphRoot(graph_root) => {
+                page.rewrite_card(
+                    &card,
+                    &card_ranges,
+                    CardBodyParts::PROMPT | CardBodyParts::RESPONSE,
+                )?;
+                let csn = card.metadata.card_ref.serial_num.unwrap();
 
-        Ok(())
+                let mut card_fsrs_metas_by_csn = Self::load_fsrs_metas(graph_root)?;
+                card_fsrs_metas_by_csn.insert(csn, srs_meta.fsrs_meta.clone());
+                Self::store_fsrs_metas(graph_root, card_fsrs_metas_by_csn)
+            }
+        }
     }
 
     pub fn select_card_metadata(
