@@ -27,6 +27,7 @@ use crate::output::CardBodyParts;
 use crate::output::format_card_logseq;
 use crate::types::Card;
 use crate::types::CardBody;
+use crate::types::CardId;
 use crate::types::CardMetadata;
 use crate::types::CardRef;
 use crate::types::FSRSMeta;
@@ -268,60 +269,76 @@ fn maybe_allocate_serial_num(
     Ok(())
 }
 
-fn extract_card(
-    card_list_item: &mdast::ListItem,
-    path: Rc<PathBuf>,
-    file_raw_lines: &[&str],
-) -> Result<Card> {
-    let (prompt_lines, response_lines) = destructure_card(card_list_item, file_raw_lines)?;
-
-    let prompt_line_first = prompt_lines.first().unwrap_or(&"").to_owned().trim_end();
-    let prompt_indent_size = prompt_line_first.chars().take_while(|c| *c == ' ').count();
-    let prompt_indent = " ".repeat(prompt_indent_size);
-
-    let prompt = strip_indent(strip_prompt_metadata(prompt_lines.iter().copied()), &prompt_indent)
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    let response =
-        strip_indent(response_lines.iter().copied(), &prompt_indent).collect::<Vec<_>>().join("\n");
-
-    Ok(Card {
-        metadata: CardMetadata {
-            card_ref: CardRef {
-                source_path: path,
-                prompt_fingerprint: prompt.as_str().into(),
-                serial_num: extract_serial_num(&prompt),
-            },
-            srs_meta: SRSMeta::from_prompt_lines(prompt_lines)
-                .with_context(|| "when extracting SRS meta")?,
-        },
-        body: CardBody { prompt, prompt_indent: prompt_indent_size, response },
-    })
-}
-
 struct Page {
+    path: Rc<PathBuf>,
     file_raw: String,
     card_list_items: Vec<mdast::ListItem>,
 }
 
 impl Page {
-    fn from(path: &Path) -> Result<Self> {
+    fn new(path: &Path) -> Result<Self> {
         let file_raw = fs::read_to_string(path)?;
 
         let card_list_items = find_card_list_items(&file_raw)
             .with_context(|| anyhow!("when searching for card list items"))?;
-        Ok(Page { file_raw, card_list_items })
+        Ok(Page { path: Rc::new(path.to_path_buf()), file_raw, card_list_items })
     }
 
     fn get_lines(&self) -> Vec<&str> {
         self.file_raw.lines().collect()
     }
 
-    fn find_card(&self, card_ref: &CardRef) -> Result<(CardLineRanges, Card)> {
+    fn extract_card(&self, card_list_item: &mdast::ListItem) -> Result<Card> {
         let file_raw_lines = self.get_lines();
+        let (prompt_lines, response_lines) = destructure_card(card_list_item, &file_raw_lines)?;
+
+        let prompt_line_first = prompt_lines.first().unwrap_or(&"").to_owned().trim_end();
+        let prompt_indent_size = prompt_line_first.chars().take_while(|c| *c == ' ').count();
+        let prompt_indent = " ".repeat(prompt_indent_size);
+
+        let prompt =
+            strip_indent(strip_prompt_metadata(prompt_lines.iter().copied()), &prompt_indent)
+                .collect::<Vec<_>>()
+                .join("\n");
+
+        let response = strip_indent(response_lines.iter().copied(), &prompt_indent)
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        Ok(Card {
+            metadata: CardMetadata {
+                card_ref: CardRef {
+                    source_path: self.path.clone(),
+                    prompt_fingerprint: prompt.as_str().into(),
+                    serial_num: extract_serial_num(&prompt),
+                },
+                srs_meta: SRSMeta::from_prompt_lines(prompt_lines)
+                    .with_context(|| "when extracting SRS meta")?,
+            },
+            body: CardBody { prompt, prompt_indent: prompt_indent_size, response },
+        })
+    }
+
+    fn extract_cards(&self) -> Result<Vec<Card>> {
+        self.card_list_items
+            .iter()
+            .map(|li| {
+                self.extract_card(li).with_context(|| {
+                    anyhow!(
+                        "when extracting a card from list item on line {}",
+                        li.position
+                            .as_ref()
+                            .map(|pos| pos.start.line)
+                            .expect("so far list items always have a start...")
+                    )
+                })
+            })
+            .collect()
+    }
+
+    fn find_card(&self, card_ref: &CardRef) -> Result<(CardLineRanges, Card)> {
         for li in &self.card_list_items {
-            let card = extract_card(li, card_ref.source_path.clone(), &file_raw_lines)?;
+            let card = self.extract_card(li)?;
             if card.metadata.card_ref.prompt_fingerprint == card_ref.prompt_fingerprint {
                 let card_ranges = find_card_ranges(li)?;
                 return Ok((card_ranges, card));
@@ -336,12 +353,11 @@ impl Page {
 
     fn rewrite_card(
         &self,
-        path: &Path,
         card_ranges: &CardLineRanges,
         format_card: impl FnOnce(&mut dyn std::io::Write) -> Result<()>,
     ) -> Result<()> {
         let file_raw_lines = self.get_lines();
-        let mut f = File::create(path)?;
+        let mut f = File::create(self.path.as_ref())?;
 
         let pre_lines = &file_raw_lines[..*card_ranges.prompt_range.start()];
         if !pre_lines.is_empty() {
@@ -359,30 +375,6 @@ impl Page {
 
         Ok(())
     }
-}
-
-fn extract_card_metadatas(path: Rc<PathBuf>) -> Result<Vec<CardMetadata>> {
-    let page = Page::from(&path)?;
-
-    let file_raw_lines = page.get_lines();
-    let cards = page
-        .card_list_items
-        .iter()
-        .map(|li| {
-            extract_card(li, path.clone(), &file_raw_lines).with_context(|| {
-                anyhow!(
-                    "when extracting a card from list item on line {}",
-                    li.position
-                        .as_ref()
-                        .map(|pos| pos.start.line)
-                        .expect("so far list items always have a start...")
-                )
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    let card_metadatas = cards.into_iter().map(|c| c.metadata).collect();
-
-    Ok(card_metadatas)
 }
 
 trait CardSerialNumAllocator {
@@ -497,56 +489,75 @@ fn choose_serial_num_allocator(path: &Path) -> Result<Box<dyn CardSerialNumAlloc
     Ok(Box::new(GraphRootSerialNumAllocator { graph_root }))
 }
 
-pub trait StorageManager {
-    fn load_card_metas(&self, page_file: &Path) -> Result<Vec<CardMetadata>>;
-    fn rewrite_card_meta(&mut self, card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<()>;
-    fn load_card_body_by_ref(&self, card_ref: &CardRef) -> Result<CardBody>;
-    fn find_page_files(&self, path: &Path) -> Result<Vec<PathBuf>>;
-}
-
-pub struct LogseqStorageManager {
+pub struct StorageManager {
     serial_num_allocator: Box<dyn CardSerialNumAllocator>,
 }
 
-impl LogseqStorageManager {
+impl StorageManager {
     pub fn new(path: &Path) -> Result<Self> {
         Ok(Self { serial_num_allocator: choose_serial_num_allocator(path)? })
     }
-}
 
-impl StorageManager for LogseqStorageManager {
-    fn load_card_metas(&self, page_file: &Path) -> Result<Vec<CardMetadata>> {
-        let card_metas = extract_card_metadatas(Rc::new(page_file.to_path_buf()))?;
-
-        Ok(card_metas)
-    }
-
-    fn rewrite_card_meta(&mut self, card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<()> {
-        let page = Page::from(&card_ref.source_path)?;
-
-        let (card_ranges, mut card) = page.find_card(card_ref)?;
-        card.metadata.srs_meta = srs_meta.clone();
-
-        maybe_allocate_serial_num(&mut card, self.serial_num_allocator.as_mut())?;
-
-        page.rewrite_card(&card_ref.source_path, &card_ranges, |w| {
-            format_card_logseq(&card, w, CardBodyParts::ALL)
-        })?;
-
-        Ok(())
-    }
-
-    fn load_card_body_by_ref(&self, card_ref: &CardRef) -> Result<CardBody> {
-        let page = Page::from(&card_ref.source_path)?;
-        let (_card_ranges, card) = page.find_card(card_ref)?;
-        Ok(card.body)
-    }
-
-    fn find_page_files(&self, path: &Path) -> Result<Vec<PathBuf>> {
+    pub fn find_page_files(&self, path: &Path) -> Result<Vec<PathBuf>> {
         match find_page_files_inner(path)? {
             PageFiles::Single(page_path) => Ok(vec![page_path]),
             PageFiles::SingleInGraphRoot(_, page_path) => Ok(vec![page_path]),
             PageFiles::GraphRoot(_, page_paths) => Ok(page_paths),
         }
+    }
+
+    fn load_card_metas_from_page(&self, page_file: &Path) -> Result<Vec<CardMetadata>> {
+        let page = Page::new(page_file)?;
+        let card_metadatas = page.extract_cards()?.into_iter().map(|c| c.metadata).collect();
+        Ok(card_metadatas)
+    }
+
+    pub fn load_card_body_by_ref(&self, card_ref: &CardRef) -> Result<CardBody> {
+        let page = Page::new(&card_ref.source_path)?;
+        let (_card_ranges, card) = page.find_card(card_ref)?;
+        Ok(card.body)
+    }
+
+    pub fn load_card_metas(&self, page_file: &Path) -> Result<Vec<CardMetadata>> {
+        self.load_card_metas_from_page(page_file)
+    }
+
+    pub fn rewrite_card_meta(&mut self, card_ref: &CardRef, srs_meta: &SRSMeta) -> Result<()> {
+        let page = Page::new(&card_ref.source_path)?;
+        let (card_ranges, mut card) = page.find_card(card_ref)?;
+        card.metadata.srs_meta = srs_meta.clone();
+        maybe_allocate_serial_num(&mut card, self.serial_num_allocator.as_mut())?;
+
+        page.rewrite_card(&card_ranges, |w| format_card_logseq(&card, w, CardBodyParts::ALL))?;
+
+        Ok(())
+    }
+
+    pub fn select_card_metadata(
+        &self,
+        path: &Path,
+        card_id: Option<CardId>,
+    ) -> Result<Vec<CardMetadata>> {
+        let page_files: Vec<PathBuf> = self.find_page_files(path)?;
+        let mut all_card_metadatas: Vec<CardMetadata> = Vec::new();
+        for page_file in page_files.into_iter() {
+            // avoid copying page_file just so we can print it later
+            let context = format!("when extracting card metadatas from {}", &page_file.display());
+            let mut card_metadatas = self.load_card_metas(&page_file).with_context(|| context)?;
+
+            if let Some(card_id) = card_id.clone() {
+                let p: Box<dyn Fn(&CardMetadata) -> bool> = match &card_id {
+                    CardId::Fingerprint(fingerprint) => {
+                        Box::new(|cm: &CardMetadata| cm.card_ref.prompt_fingerprint == *fingerprint)
+                    }
+                    CardId::SerialNum(serial_num) => {
+                        Box::new(|cm: &CardMetadata| cm.card_ref.serial_num == Some(*serial_num))
+                    }
+                };
+                card_metadatas.retain(p);
+            }
+            all_card_metadatas.extend(card_metadatas);
+        }
+        Ok(all_card_metadatas)
     }
 }
