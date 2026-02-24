@@ -338,6 +338,7 @@ test_file!(
     review_card_without_meta_remembered_yes,
     "review_card_without_meta_remembered_yes.txtar"
 );
+test_file!(review_delay, "review_delay.txtar");
 test_file!(review_remembered_no, "review_remembered_no.txtar");
 test_file!(review_remembered_yes, "review_remembered_yes.txtar");
 test_file!(
