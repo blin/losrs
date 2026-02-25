@@ -73,13 +73,30 @@ fn grab_key_event() -> Result<KeyEvent> {
 
 const ESCAPE_INSTRUCTIONS: &str = "Ctrl+C or Esc to nope out";
 
-pub fn wait_for_anykey(action_description: &str) -> Result<()> {
-    print!("\nPress any key to {action_description} ({ESCAPE_INSTRUCTIONS})");
+#[derive(Debug, PartialEq)]
+pub enum PreReviewResponse {
+    ShowResponse,
+    DelayReview,
+}
+
+pub fn wait_for_prereview() -> Result<PreReviewResponse> {
+    print!("\nSpace - show the response; D - delay review by 1 day; {ESCAPE_INSTRUCTIONS}");
     stdout().flush()?;
 
-    grab_key_event()?;
+    // BUG: key grabbing should be inside the while loop
+    let key_event = grab_key_event()?;
 
-    Ok(())
+    let mut tries = 3;
+
+    while tries > 0 {
+        match key_event.code {
+            KeyCode::Char(' ') => return Ok(PreReviewResponse::ShowResponse),
+            KeyCode::Char('d') => return Ok(PreReviewResponse::DelayReview),
+            _ => tries -= 1,
+        };
+    }
+
+    Err(anyhow!("Did not receive expected answer, aborting"))
 }
 
 #[derive(Debug, PartialEq)]

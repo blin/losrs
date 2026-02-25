@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::Context;
 use anyhow::Ok;
 use anyhow::Result;
@@ -12,9 +14,10 @@ use crate::output::show_card;
 use crate::output::show_card_prompt;
 use crate::settings::OutputSettings;
 use crate::storage::StorageManager;
+use crate::terminal::PreReviewResponse;
 use crate::terminal::ReviewResponse;
 use crate::terminal::clear_screen;
-use crate::terminal::wait_for_anykey;
+use crate::terminal::wait_for_prereview;
 use crate::terminal::wait_for_review;
 use crate::types::Card;
 use crate::types::CardMetadata;
@@ -84,6 +87,16 @@ fn compute_next_srs_meta(fsrs_meta: &ReviewableFSRSMeta, resp: &ReviewResponse) 
     SRSMeta { logseq_srs_meta: next_logseq_srs_meta, fsrs_meta: next_fsrs_meta }
 }
 
+fn compute_delayed_srs_meta(fsrs_meta: &ReviewableFSRSMeta, delay: Duration) -> SRSMeta {
+    let mut delayed_fsrs_meta = fsrs_meta.inner.clone();
+    // Delay is relative to review time, not card due time,
+    // as we might be reviewing a card long past original due date.
+    delayed_fsrs_meta.due = truncate_to_millis(&(fsrs_meta.reviewed_at + delay).into());
+    let delayed_logseq_srs_meta = (&delayed_fsrs_meta).into();
+
+    SRSMeta { logseq_srs_meta: delayed_logseq_srs_meta, fsrs_meta: delayed_fsrs_meta }
+}
+
 fn format_reviewing_phrase(cm: &CardMetadata) -> String {
     match cm.card_ref.serial_num {
         Some(serial_num) => format!(
@@ -131,17 +144,24 @@ pub fn review_card(
     // 4. Show the whole thing
     show_card_prompt(&card, output_settings)?;
 
-    wait_for_anykey("show the answer")?;
+    let prereview_response = wait_for_prereview()?;
 
-    clear_screen()?;
-    println!("{}", review_phrase);
+    let new_srs_meta = match prereview_response {
+        PreReviewResponse::ShowResponse => {
+            clear_screen()?;
+            println!("{}", review_phrase);
 
-    show_card(&card, output_settings)?;
+            show_card(&card, output_settings)?;
 
-    let review_response = wait_for_review()?;
-    let next_srs_meta = compute_next_srs_meta(&reviewable_fsrs_meta, &review_response);
+            let review_response = wait_for_review()?;
+            compute_next_srs_meta(&reviewable_fsrs_meta, &review_response)
+        }
+        PreReviewResponse::DelayReview => {
+            compute_delayed_srs_meta(&reviewable_fsrs_meta, Duration::from_hours(24))
+        }
+    };
 
-    storage_manager.rewrite_card_meta(&card.metadata.card_ref, &next_srs_meta)?;
+    storage_manager.rewrite_card_meta(&card.metadata.card_ref, &new_srs_meta)?;
 
     Ok(())
 }

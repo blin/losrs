@@ -45,7 +45,7 @@ RunLosrsReview
 -- actions/02_action_args --
 review $GRAPH_ROOT --at=2025-11-23T15:04:05.123456789Z
 -- actions/02_review_actions --
-exp_string,Press any key to show the answer
+exp_string,Space - show the response; D - delay review by 1 day; Ctrl+C or Esc to nope out
 send, 
 flush,
 exp_string,How much effort did recall require?
