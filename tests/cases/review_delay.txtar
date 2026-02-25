@@ -51,11 +51,7 @@ RunLosrsReview
 review $GRAPH_ROOT --at=2025-11-22T15:04:05.123456789Z
 -- actions/02_review_actions --
 exp_string,Space - show the response; D - delay review by 1 day; Ctrl+C or Esc to nope out
-send, 
-flush,
-exp_string,How much effort did recall require?
-exp_string,1 - Little Effort; 2 - Some effort; 3 - Much Effort; 4 - Did not recall
-send,4
+send,d
 flush,
 read_line,
 -- actions/03_action_name --
@@ -71,23 +67,23 @@ metadata $GRAPH_ROOT
   },
   "srs_meta": {
     "logseq_srs_meta": {
-      "last_interval": 9.0,
-      "repeats": 7,
+      "last_interval": 244.0,
+      "repeats": 6,
       "ease_factor": 2.5,
-      "next_schedule": "2025-12-01T15:04:05.123Z",
-      "last_reviewed": "2025-11-22T15:04:05.123Z",
+      "next_schedule": "2025-11-23T15:04:05.123Z",
+      "last_reviewed": "2025-03-22T09:54:57.202Z",
       "last_score": 5
     },
     "fsrs_meta": {
-      "due": "2025-12-01T15:04:05.123Z",
-      "stability": 8.774,
-      "difficulty": 7.04,
-      "elapsed_days": 245,
-      "scheduled_days": 9,
-      "reps": 7,
-      "lapses": 1,
+      "due": "2025-11-23T15:04:05.123Z",
+      "stability": 244.14,
+      "difficulty": 5.0,
+      "elapsed_days": 244,
+      "scheduled_days": 244,
+      "reps": 6,
+      "lapses": 0,
       "state": "Review",
-      "last_review": "2025-11-22T15:04:05.123Z"
+      "last_review": "2025-03-22T09:54:57.202Z"
     }
   }
 }
