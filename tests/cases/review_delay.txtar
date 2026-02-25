@@ -1,0 +1,89 @@
+-- pages/Sphere.md --
+- Not card
+- What is a sphere? #card
+  card-last-interval:: 244.14
+  card-repeats:: 6
+  card-ease-factor:: 3.1
+  card-next-schedule:: 2025-11-21T00:00:00.000Z
+  card-last-reviewed:: 2025-03-22T09:54:57.202Z
+  card-last-score:: 5
+  - Set of points in a 3 dimensional space that are equidistant from a center point.
+- Not card
+-- losrs.toml --
+[output]
+format = "clean"
+-- actions/01_action_name --
+RunLosrs
+-- actions/01_action_args --
+metadata $GRAPH_ROOT
+-- actions/01_expected_stdout --
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/Sphere.md",
+    "prompt_fingerprint": "0xb9de554a02212aca",
+    "serial_num": null
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 244.14,
+      "repeats": 6,
+      "ease_factor": 3.1,
+      "next_schedule": "2025-11-21T00:00:00Z",
+      "last_reviewed": "2025-03-22T09:54:57.202Z",
+      "last_score": 5
+    },
+    "fsrs_meta": {
+      "due": "2025-11-21T00:00:00Z",
+      "stability": 244.14,
+      "difficulty": 5.0,
+      "elapsed_days": 244,
+      "scheduled_days": 244,
+      "reps": 6,
+      "lapses": 0,
+      "state": "Review",
+      "last_review": "2025-03-22T09:54:57.202Z"
+    }
+  }
+}
+-- actions/02_action_name --
+RunLosrsReview
+-- actions/02_action_args --
+review $GRAPH_ROOT --at=2025-11-22T15:04:05.123456789Z
+-- actions/02_review_actions --
+exp_string,Space - show the response; D - delay review by 1 day; Ctrl+C or Esc to nope out
+send,d
+flush,
+read_line,
+-- actions/03_action_name --
+RunLosrs
+-- actions/03_action_args --
+metadata $GRAPH_ROOT
+-- actions/03_expected_stdout --
+{
+  "card_ref": {
+    "source_path": "[TMP_DIR]/pages/Sphere.md",
+    "prompt_fingerprint": "0x481b8539d850822f",
+    "serial_num": 0
+  },
+  "srs_meta": {
+    "logseq_srs_meta": {
+      "last_interval": 244.0,
+      "repeats": 6,
+      "ease_factor": 2.5,
+      "next_schedule": "2025-11-23T15:04:05.123Z",
+      "last_reviewed": "2025-03-22T09:54:57.202Z",
+      "last_score": 5
+    },
+    "fsrs_meta": {
+      "due": "2025-11-23T15:04:05.123Z",
+      "stability": 244.14,
+      "difficulty": 5.0,
+      "elapsed_days": 244,
+      "scheduled_days": 244,
+      "reps": 6,
+      "lapses": 0,
+      "state": "Review",
+      "last_review": "2025-03-22T09:54:57.202Z"
+    }
+  }
+}
