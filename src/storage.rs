@@ -632,9 +632,7 @@ impl StorageManager {
         maybe_allocate_serial_num(&mut card, self.serial_num_allocator.as_mut())?;
 
         match &self.metadata_source {
-            MetadataSource::PageFiles => {
-                page.rewrite_card(&card, &card_ranges, CardBodyParts::ALL)
-            }
+            MetadataSource::PageFiles => page.rewrite_card(&card, &card_ranges, CardBodyParts::ALL),
             MetadataSource::GraphRoot(graph_root) => {
                 page.rewrite_card(
                     &card,
