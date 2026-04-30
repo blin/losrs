@@ -1,25 +1,21 @@
 # losrs
 
-*losrs* lets you review Spaced Repetition System (SRS) cards created in
-[Logseq](https://github.com/logseq/logseq) in the terminal.
-
-This project was created as a workaround for
-[Logseq SRS Algorithm being faulty](https://github.com/logseq/logseq/issues/8890)
-and the fault
-[only being fixed in the database version of Logseq](https://github.com/logseq/logseq/pull/11540)
-to the exclusion of plain file version of Logseq.
+*losrs* lets you create Spaced Repetition System (SRS) cards in markdown format
+and review them from your terminal.
 
 ![](demo/demo.gif)
 
-## Prerequisites
+## Getting started
 
-losrs works with a very narrow subset of Logseq features,
-at the very least you need to ensure that:
-Logseq graph root where you plan to use losrs is configured with
-`:export/bullet-indentation :two-spaces` .
+TODO: write this section
+
+TODO: add an `init` command
+
+## Image rendering prerequisites
 
 To render images in your cards you can use losrs with
-`--format=(sixel|kitty|i-term)`.
+`output.format = (sixel|kitty|i-term)`,
+see `losrs config --help`.
 
 All image based formats require:
 
@@ -60,13 +56,31 @@ Things that are known to NOT work:
   the metadata will be updated for one of the cards,
   but not necessarily the one that was due for review.
   This is a consequence of not tracking the position of cards
-  in the page, and updating code matching on prompt.
-* Cards with cloze deletions do not have a three stage review
-  (show prompt, show response with cloze block hidden,
-  show response with cloze block shown),
-  and instead have a normal two stage review
-  (show prompt, show response).
+  in the page, and updating code matching on prompt
+  (this can probably be fixed now with CSN matching,
+  but requires more thought).
 * When rendering via an image based format,
   a card must fit in the terminal window by height.
   Specify a relative height like `{height=50%}` to ensure
   images fit.
+
+## History
+
+This project was created as a workaround for
+[Logseq SRS Algorithm being faulty](https://github.com/logseq/logseq/issues/8890)
+and the fault
+[only being fixed in the database version of Logseq](https://github.com/logseq/logseq/pull/11540)
+to the exclusion of plain file version of Logseq.
+
+The Logseq markdown card metadata format is still supported via
+the `inline` `storage.metadata_mode`,
+but that mode is deprecated and slated for removal,
+as using it is a bit rough due to an additional node property field
+that does not get hidden by Logseq.
+
+If anyone cares about keeping this mode, please file an issue.
+
+losrs works with a very narrow subset of Logseq features,
+at the very least you need to ensure that
+Logseq graph root where you plan to use losrs is configured with
+`:export/bullet-indentation :two-spaces` .

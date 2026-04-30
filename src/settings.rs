@@ -90,6 +90,6 @@ pub struct StorageSettings {
 
 impl Default for StorageSettings {
     fn default() -> Self {
-        Self { metadata_mode: MetadataMode::Inline }
+        Self { metadata_mode: MetadataMode::InGraphRoot }
     }
 }
