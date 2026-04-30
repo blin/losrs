@@ -99,25 +99,9 @@ fn card_to_png(
     let typst = markdown_to_typst(markdown)
         .with_context(|| "failed to convert markdown to typst using pandoc".to_owned())?;
 
-    // [tag:logseq-dir-layout]
-    //
-    // graph_root
-    // ├── assets
-    // │   ├── image_1666695381725_0.png
-    // │   ├── ...
-    // ├── journals
-    // │   ├── 2022_02_13.md
-    // │   ├── ...
-    // ├── logseq
-    // │   ├── config.edn
-    // │   ├── custom.css
-    // │   ├── metadata.edn
-    // │   └── srs-of-matrix.edn
-    // └── pages
-    //     ├── Sphere.md
-    //     ├── ...
-    //
-    // So to get graph_root we need to go up twice
+    // As per [ref:logseq-dir-layout]
+    // the page file is located at `.../graph_root/pages/page.md`,
+    // so to get graph_root we need to go up twice
     let graph_root =
         card.metadata.card_ref.source_path.parent().and_then(Path::parent).ok_or(anyhow!(
             "page file does not have a grandparent. The page is {}",
