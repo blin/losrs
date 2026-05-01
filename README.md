@@ -123,7 +123,10 @@ any time soon.
 Things that are known to NOT work:
 
 * Rendering references
-* Rendering LaTeX code that can not be converted to Typst
+* Rendering LaTeX code that pandoc does not recognise.
+  See
+  [pandoc's source](https://github.com/jgm/HeX/blob/5bab503606e01c453555545493c43c00398ca408/Text/HeX/Math/LaTeX.hs)
+  for a list of symbols that are recognized by pandoc.
 * If multiple cards with the same prompt are on the same page,
   when reviewing any of the cards
   the metadata will be updated for one of the cards,
