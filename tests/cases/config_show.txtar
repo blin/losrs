@@ -17,6 +17,6 @@ config show
     "line_height_scaling": 1.2
   },
   "storage": {
-    "metadata_mode": "inline"
+    "metadata_mode": "in-graph-root"
   }
 }
