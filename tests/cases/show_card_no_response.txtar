@@ -1,0 +1,11 @@
+-- pages/Sphere.md --
+- Not card
+- What is a sphere? #card
+- Not card
+-- actions/01_action_name --
+RunLosrs
+-- actions/01_action_args --
+show $GRAPH_ROOT
+-- actions/01_action_envs --
+LOSRS__OUTPUT__FORMAT=clean
+-- actions/01_expected_stdout --

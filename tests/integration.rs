@@ -290,6 +290,8 @@ test_file!(root_help, "root_help.txtar");
 
 test_file!(show_help, "show_help.txtar");
 test_file!(show_card_is_deeply_nested, "show_card_is_deeply_nested.txtar");
+test_file!(show_card_nested_no_response, "show_card_nested_no_response.txtar");
+test_file!(show_card_no_response, "show_card_no_response.txtar");
 test_file!(show_card_with_data_after_metadata, "show_card_with_data_after_metadata.txtar");
 test_file!(show_card_with_unicode_prompt, "show_card_with_unicode_prompt.txtar");
 test_file!(show_format_clean, "show_format_clean.txtar");

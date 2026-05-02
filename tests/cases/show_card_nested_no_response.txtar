@@ -1,0 +1,12 @@
+-- pages/losrs.md --
+- What is the format for a losrs card prompt? #card
+  - Unordered list item with `#card` in the end
+-- actions/01_action_name --
+RunLosrs
+-- actions/01_action_args --
+show $GRAPH_ROOT
+-- actions/01_action_envs --
+LOSRS__OUTPUT__FORMAT=clean
+-- actions/01_expected_stdout --
+- What is the format for a losrs card prompt? #card
+  - Unordered list item with `#card` in the end
