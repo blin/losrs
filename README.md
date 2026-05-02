@@ -45,8 +45,6 @@ that ends with `#card`, for example:
   - Unordered sublist for an unordered list item with `#card` in the end
 ```
 
-TODO: the response nodes here might actually be detected as prompt nodes...
-
 You can now review the cards
 either in a specific page file via
 `losrs review pages/my-first-page.md`
