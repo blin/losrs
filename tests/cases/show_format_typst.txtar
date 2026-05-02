@@ -16,5 +16,5 @@ show $GRAPH_ROOT
 -- actions/01_action_envs --
 LOSRS__OUTPUT__FORMAT=typst
 -- actions/01_expected_stdout --
-- What is the antiderivative of $f \( x \) = x^r$ (symbolic)? \#card
-  - $ integral x^r d x = frac(x^(\( r + 1 \)), r + 1) + C $
+- What is the antiderivative of $f\(x\)= x^r$ (symbolic)? \#card
+  - $ integral x^r d x = frac(x^(\(r + 1\)), r + 1) + C $
