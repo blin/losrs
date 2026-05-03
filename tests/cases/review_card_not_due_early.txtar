@@ -23,26 +23,16 @@ metadata $GRAPH_ROOT
     "prompt_fingerprint": "0xb9de554a02212aca",
     "serial_num": null
   },
-  "srs_meta": {
-    "logseq_srs_meta": {
-      "last_interval": 244.14,
-      "repeats": 6,
-      "ease_factor": 3.1,
-      "next_schedule": "2025-11-21T00:00:00Z",
-      "last_reviewed": "2025-03-22T09:54:57.202Z",
-      "last_score": 5
-    },
-    "fsrs_meta": {
-      "due": "2025-11-21T00:00:00Z",
-      "stability": 244.14,
-      "difficulty": 5.0,
-      "elapsed_days": 244,
-      "scheduled_days": 244,
-      "reps": 6,
-      "lapses": 0,
-      "state": "Review",
-      "last_review": "2025-03-22T09:54:57.202Z"
-    }
+  "fsrs_meta": {
+    "due": "2025-11-21T00:00:00Z",
+    "stability": 244.14,
+    "difficulty": 5.0,
+    "elapsed_days": 244,
+    "scheduled_days": 244,
+    "reps": 6,
+    "lapses": 0,
+    "state": "Review",
+    "last_review": "2025-03-22T09:54:57.202Z"
   }
 }
 -- actions/02_action_name --
@@ -69,25 +59,15 @@ metadata $GRAPH_ROOT
     "prompt_fingerprint": "0x481b8539d850822f",
     "serial_num": 0
   },
-  "srs_meta": {
-    "logseq_srs_meta": {
-      "last_interval": 245.0,
-      "repeats": 7,
-      "ease_factor": 2.5,
-      "next_schedule": "2025-11-22T09:54:57.202Z",
-      "last_reviewed": "2025-03-22T09:54:57.202Z",
-      "last_score": 5
-    },
-    "fsrs_meta": {
-      "due": "2025-11-22T09:54:57.202Z",
-      "stability": 244.14,
-      "difficulty": 4.96,
-      "elapsed_days": 0,
-      "scheduled_days": 245,
-      "reps": 7,
-      "lapses": 0,
-      "state": "Review",
-      "last_review": "2025-03-22T09:54:57.202Z"
-    }
+  "fsrs_meta": {
+    "due": "2025-11-22T09:54:57.202Z",
+    "stability": 244.14,
+    "difficulty": 4.96,
+    "elapsed_days": 0,
+    "scheduled_days": 245,
+    "reps": 7,
+    "lapses": 0,
+    "state": "Review",
+    "last_review": "2025-03-22T09:54:57.202Z"
   }
 }
