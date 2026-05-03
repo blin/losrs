@@ -11,9 +11,10 @@ Set TypingSpeed 40ms
 # See https://github.com/charmbracelet/vhs/issues/43#issuecomment-2342408251
 # for the upstream discussion.
 Env LOSRS__OUTPUT__FORMAT "sixel"
-Env LOSRS__OUTPUT__PPI "96"
+Env LOSRS__OUTPUT__PPI "80"
 Env LOSRS__OUTPUT__BASE_FONT_SIZE "12"
 Env LOSRS__OUTPUT__LINE_HEIGHT_SCALING "1.0"
+Env LOSRS__STORAGE__METADATA_MODE "in-graph-root"
 
 
 Type "echo 'Here are some freshly created SRS cards'"
@@ -35,7 +36,7 @@ Sleep 0.5s
 Enter
 
 
-Type `echo 'Let us review them. We will respond with "1 - Little effort" for the first and "4 - Did not recall" for the second'`
+Type `echo 'Let us review them. We will respond with "2 - Some effort" for the first and "4 - Did not recall" for the second'`
 Sleep 0.5s
 Enter
 
@@ -56,7 +57,7 @@ Enter
 Sleep 3.0s
 Space
 Sleep 3.0s
-Type "1"
+Type "2"
 Sleep 3.0s
 Space
 Sleep 3.0s
@@ -69,19 +70,24 @@ Sleep 0.5s
 Enter
 
 
+Type "cat pages/lens.md"
+Sleep 0.5s
+Enter
+
 Type "losrs metadata pages/lens.md"
 Sleep 0.5s
 Enter
 
-Type "losrs metadata pages/lens.md | grep next.sched"
+Type "losrs metadata pages/lens.md | jq .fsrs_meta.due"
 Sleep 0.5s
 Enter
+
 
 Type "echo 'The card we could not recall is due next day'"
 Sleep 0.5s
 Enter
 
-Type "echo 'The card that took little effort to recall is due in two weeks'"
+Type "echo 'The card that took little effort to recall is due in three days'"
 Sleep 0.5s
 Enter
 
