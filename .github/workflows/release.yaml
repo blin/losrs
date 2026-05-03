@@ -19,7 +19,6 @@ jobs:
           - { OS: macos-latest, TARGET: "aarch64-apple-darwin" }
           - { OS: macos-latest, TARGET: "x86_64-apple-darwin" }
           - { OS: ubuntu-latest, TARGET: "x86_64-unknown-linux-gnu" }
-          - { OS: windows-latest, TARGET: "x86_64-pc-windows-msvc" }
 
     steps:
       - name: Checkout the repository
