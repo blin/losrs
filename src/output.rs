@@ -7,6 +7,7 @@ use std::process;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
+use serde::Serialize;
 use tempfile::NamedTempFile;
 
 use crate::settings::OutputFormat;
@@ -14,6 +15,8 @@ use crate::settings::OutputSettings;
 use crate::terminal::grab_term_size;
 use crate::types::Card;
 use crate::types::CardMetadata;
+use crate::types::CardRef;
+use crate::types::FSRSMeta;
 use crate::types::SRSMeta;
 
 bitflags::bitflags! {
@@ -53,7 +56,17 @@ pub fn show_card_prompt(card: &Card, output_settings: &OutputSettings) -> Result
     show_card_inner(card, CardBodyParts::PROMPT, output_settings)
 }
 
+#[derive(Serialize)]
+struct ShowCardMetadata {
+    card_ref: CardRef,
+    fsrs_meta: FSRSMeta,
+}
+
 pub fn show_metadata(cm: &CardMetadata) -> Result<()> {
+    let cm = ShowCardMetadata {
+        card_ref: cm.card_ref.clone(),
+        fsrs_meta: cm.srs_meta.fsrs_meta.clone(),
+    };
     println!("{}", serde_json::to_string_pretty(&cm)?);
     Ok(())
 }
